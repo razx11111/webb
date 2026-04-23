@@ -1,0 +1,12 @@
+
+CoA (Crisis Containment Service)
+
+(RO) Se dorește implementarea unei platforme Web care să permită gestionarea
+situațiilor de urgență (e.g. cutremure, incendii, inundații etc.) de către autorități.
+ Aplicația va oferi informații de interes în legătură cu evenimentele petrecute și
+ zonele afectate. De asemenea, vor fi folosite datele publice referitoare la cutremure
+ , inclusiv cutremurele din România. Suplimentar, se va recurge la utilizarea
+ Common Alerting Protocol pentru transmiterea de notificări și alerte populației
+ (afectate).
+Sistemul va furniza și informații despre ventualele adăposturi și rute de salvare,
+în funcție de categoria calamității înregistrate.
