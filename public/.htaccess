@@ -5,4 +5,3 @@
     RewriteRule ^(.*)$ index.php [QSA,L]
 </IfModule>
 
-#redirectionam spre index.php daca nici un path valid nu e mentionat

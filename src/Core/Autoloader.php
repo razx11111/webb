@@ -1,6 +1,6 @@
 <?php
 
-namespace App;
+namespace App\Core;
 
 class Autoloader
 {
@@ -11,7 +11,7 @@ class Autoloader
             $prefix = 'App\\';
 
             // Directorul de bază pentru prefixul de namespace
-            $base_dir = __DIR__ . '/';
+            $base_dir = __DIR__ . 'Autoloader.php/';
 
             // Verificăm dacă clasa folosește prefixul de namespace
             $len = strlen($prefix);
