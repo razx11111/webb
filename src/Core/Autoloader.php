@@ -7,16 +7,16 @@ class Autoloader
     public static function register()
     {
         spl_autoload_register(function ($class) {
-            // Prefixul de namespace specific proiectului
+            // Namespace prefix specific to the project
             $prefix = 'App\\';
 
-            // Directorul de bază pentru prefixul de namespace
+            // Base directory for the prefix
             $base_dir = dirname(__DIR__) . '/';
 
-            // Verificăm dacă clasa folosește prefixul de namespace
+            // We check if the class uses the namespace prefix
             $len = strlen($prefix);
             if (strncmp($prefix, $class, $len) !== 0) {
-                // Dacă nu, mergem la următorul autoloader înregistrat
+                // If not, we go to the next autoloader
                 return;
             }
 

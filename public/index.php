@@ -1,39 +1,55 @@
 <?php
 
-// 1. Inițializarea
-// Încărcăm setările globale și Autoloader-ul
+// 1. Init
+// We load the global settings and the Autoloader
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../src/Core/Autoloader.php';
 
-// Înregistrăm Autoloader-ul ca PHP să știe să găsească clasele singur
+//  We register the Autoloader as PHP to know how to find its classes
 App\Core\Autoloader::register();
 
-// 2. Instanțiem Controller/
+// 2. We instanciate the Controller/
 use App\Controllers\DisasterController;
 $controller = new DisasterController();
 
-// 3. Citim Request-ul.
-// Daca in URL avem "?action=ceva", îl luăm. Dacă nu, punem valoarea default 'home'.
+// 3. We read the Request.
+// If in the URL we have "?action=something", we check it.
+// If it's not there, we use 'home' as default
 $action = isset($_GET['action']) ? $_GET['action'] : 'home';
 
 switch ($action) {
+    case 'floods':
+        // We show a detailed view of the floods
+        $controller->getFloods();
+        break;
+
+    case 'earthquakes':
+        // We show a detailed view of the earthquakes
+        $controller->getEarthquakes();
+        break;
+
+    case 'fires':
+        // We show a detailed view of the fires
+        $controller->getFires();
+        break;
+
     case 'api_data':
-        // Dacă clientul cere "?action=api_data", returnăm JSON cu dezastrele
+        // If the client asks for "?action=api_data", we return the JSON with the disasters
         $controller->getDisasters();
         break;
 
     case 'sync':
-        // Dacă clientul apasă butonul de Sync, chemăm metoda care aduce date de pe net
+        // If the client presses the Sync button, we call the method that fetches the new data
         $controller->sync();
         break;
     case 'report':
-        // Când cineva accesează ?action=report
+        // When someone accesses "?action=report"
         $controller->report();
         break;
     case 'home':
     default:
-        // Cazul default (dacă cineva intră doar pe http://localhost:8080/)
-        // Îi afișăm interfața grafică (HTML-ul)
+        // Default case (if someone enters http://localhost:8080/)
+        // We output the home interface
         $controller->index();
         break;
 }

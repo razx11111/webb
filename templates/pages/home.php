@@ -24,6 +24,13 @@
             <span id="sync-status"></span>
         </section>
 
+        <section class="navigation-menu" style="margin-top: 20px;" >
+            <!-- Links to the specific disasters -->
+            <a href="index.php?action=floods" class=btn>Floods</a>
+            <a href="index.php?action=earthquakes" class=btn>Earthquakes</a>
+            <a href="index.php?action=fires" class=btn>Fires</a>
+        </section>
+
         <main class="dashboard-grid">
             <!-- Containers for our disaster tables -->
             <div class="card">

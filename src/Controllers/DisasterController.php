@@ -19,8 +19,7 @@ class DisasterController {
      * Renders the Scholarly HTML Report.
      */
     public function report() {
-        // Pur și simplu includem fișierul HTML pe care l-ai creat anterior
-        // Este echivalentul unui return "report" într-un controller de Spring.
+        // We include the Scholarly site
         require_once __DIR__ . '/../../public/report.html';
     }
 
@@ -93,5 +92,23 @@ class DisasterController {
                 'message' => 'Sync failed: ' . $e->getMessage()
             ]);
         }
+    }
+    // Go to floods page
+    public function getFloods()
+    {
+        $pageTitle = "Floods Management";
+        require_once __DIR__ . '/../../templates/pages/floods.php';
+    }
+    // Go to earthquakes page
+    public function getEarthquakes()
+    {
+        $pageTitle = "Earthquakes Management";
+        require_once __DIR__ . '/../../templates/pages/earthquakes.php';
+    }
+    // Go to fires page
+    public function getFires()
+    {
+        $pageTitle = "Fires Management";
+        require_once __DIR__ . '/../../templates/pages/fires.php';
     }
 }
