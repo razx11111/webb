@@ -11,10 +11,7 @@ class CAP {
     public $output = "CAP";
     public $cap = "";
 
-    // ==========================================
-    // 3.2.1 "alert" Element and Sub-elements
-    // ==========================================
-
+    //datele din CAP 1.2 data dictionary, structurare pe: alert, info, resource, area (https://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2-os.html) -> 3.1
     /**
      * @var string The identifier of the alert message (REQUIRED).
      * A number or string uniquely identifying this message, assigned by the sender.
@@ -287,5 +284,11 @@ class CAP {
      * MUST NOT be used except in combination with the <altitude> element.
      */
     public $ceiling;
+
+    function __construct($post = "", $class = false) {
+        if(is_array($post) && $class == false) {
+            f
+        }
+    }
 
 }
