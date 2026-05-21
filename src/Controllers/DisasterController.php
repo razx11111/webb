@@ -15,7 +15,15 @@ use App\Services\DataSync;
  * the data persistence layer (Models) and the presentation layer (Views/API).
  */
 class DisasterController {
-    
+    /**
+     * Renders the Scholarly HTML Report.
+     */
+    public function report() {
+        // Pur și simplu includem fișierul HTML pe care l-ai creat anterior
+        // Este echivalentul unui return "report" într-un controller de Spring.
+        require_once __DIR__ . '/../../public/report.html';
+    }
+
     /**
      * Renders the main dashboard page.
      * This is the default entry point for users visiting the site.
