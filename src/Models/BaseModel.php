@@ -27,4 +27,21 @@ abstract class BaseModel {
         $stmt->execute([':id' => $id]);
         return $stmt->fetch();
     }
+
+     // Generic create method to insert data into the table.
+    public function create(array $data) {
+        // Extracting keys (column names) from the associative array
+        $columns = implode(', ', array_keys($data));
+        
+        // Creating named placeholders for the prepared statement (e.g., :magnitude, :latitude)
+        $placeholders = ':' . implode(', :', array_keys($data));
+
+        $sql = "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeholders})";
+        
+        $stmt = $this->db->prepare($sql);
+        
+        // Execution of the statement with the data mapped to the placeholders
+        // This automatically handles data escaping to prevent SQL Injection
+        return $stmt->execute($data);
+    }
 }

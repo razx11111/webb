@@ -111,4 +111,51 @@ class DisasterController {
         $pageTitle = "Fires Management";
         require_once __DIR__ . '/../../templates/pages/fires.php';
     }
+
+    /**
+     * API Endpoint: Fetch latest earthquakes only
+     */
+    public function apiGetEarthquakes() {
+        header('Content-Type: application/json');
+        try {
+            $earthquakeModel = new Earthquake();
+            $data = $earthquakeModel->getAll(50);
+            echo json_encode($data);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * API Endpoint: Fetch latest fires only
+     */
+    public function apiGetFires() {
+        header('Content-Type: application/json');
+        try {
+            $fireModel = new Fire();
+            // Fetching data using the generic getAll from BaseModel
+            $data = $fireModel->getAll(50);
+            echo json_encode($data);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * API Endpoint: Fetch latest floods only
+     */
+    public function apiGetFloods() {
+        header('Content-Type: application/json');
+        try {
+            $floodModel = new Flood();
+            // Return data as a clean JSON stream for the frontend
+            $data = $floodModel->getAll(50);
+            echo json_encode($data);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
 }

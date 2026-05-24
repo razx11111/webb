@@ -20,14 +20,14 @@ class Autoloader
                 return;
             }
 
-            // Obținem numele clasei relativ
+            // Get the relative class name
             $relative_class = substr($class, $len);
 
-            // Înlocuim prefixul de namespace cu directorul de bază, înlocuim
-            // separatorii de namespace cu separatorii de directoare, adăugăm .php
+            // Replace the namespace prefix with the base directory, replace
+            // namespace separators with directory separators, add .php
             $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
 
-            // Dacă fișierul există, îl includem
+            // If the file exists, include it
             if (file_exists($file)) {
                 require $file;
             }

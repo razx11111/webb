@@ -1,132 +1,127 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= APP_NAME ?></title>
-    <!-- 
-        We use relative paths for CSS. 
-        Note: In a real environment, you might use an absolute URL or a helper.
-    -->
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/home.css">
+    <!-- Using absolute paths for CSS consistency -->
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/home.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1><?= APP_NAME ?></h1>
-            <p>Disaster Management Dashboard</p>
+            <div id="sync-indicator" class="sync-status">Checking for updates...</div>
         </header>
 
-        <section class="actions">
-            <!-- Button to trigger manual synchronization -->
-            <button id="sync-btn" class="btn">Sync GDACS Data</button>
-            <span id="sync-status"></span>
-        </section>
-
-        <section class="navigation-menu" style="margin-top: 20px;" >
-            <!-- Links to the specific disasters -->
-            <a href="index.php?action=floods" class=btn>Floods</a>
-            <a href="index.php?action=earthquakes" class=btn>Earthquakes</a>
-            <a href="index.php?action=fires" class=btn>Fires</a>
-        </section>
+        <nav class="navigation-menu">
+            <a href="/floods" class="btn">Floods</a>
+            <a href="/earthquakes" class="btn">Earthquakes</a>
+            <a href="/fires" class="btn">Fires</a>
+            <a href="/report" class="btn">Report</a>
+        </nav>
 
         <main class="dashboard-grid">
-            <!-- Containers for our disaster tables -->
             <div class="card">
                 <h2>Latest Floods</h2>
-                <div id="floods-container">Loading floods...</div>
+                <div id="floods-container">Loading...</div>
             </div>
 
             <div class="card">
                 <h2>Latest Fires</h2>
-                <div id="fires-container">Loading fires...</div>
+                <div id="fires-container">Loading...</div>
             </div>
 
             <div class="card">
                 <h2>Latest Earthquakes</h2>
-                <div id="earthquakes-container">Loading earthquakes...</div>
+                <div id="earthquakes-container">Loading...</div>
             </div>
         </main>
     </div>
 
-    <!-- 
-        Frontend Logic (Vanilla JS)
-        Handles asynchronous communication with the PHP backend.
-    -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const syncBtn = document.getElementById('sync-btn');
-            const statusLabel = document.getElementById('sync-status');
+            const statusLabel = document.getElementById('sync-indicator');
 
             /**
-             * Fetches disaster data from our PHP API
+             * Fetches data from our local database to show on UI
              */
-            const loadData = async () => {
+            const loadLocalData = async () => {
                 try {
-                    const response = await fetch('index.php?action=api_data');
+                    const response = await fetch('/api/disasters');
                     const data = await response.json();
                     
                     renderTable('floods-container', data.floods, 'Flood');
                     renderTable('fires-container', data.fires, 'Fire');
                     renderTable('earthquakes-container', data.earthquakes, 'Earthquake', true);
                 } catch (error) {
-                    console.error('Error fetching data:', error);
+                    console.error('Data loading error:', error);
                 }
             };
 
             /**
-             * Renders a simple HTML table for the provided data
+             * Automatically triggers the external data synchronization
+             */
+            const autoSync = async () => {
+                statusLabel.textContent = '🔄 Syncing with authorities...';
+                statusLabel.classList.add('syncing');
+
+                try {
+                    // Triggering the background sync process
+                    const response = await fetch('/api/sync');
+                    const result = await response.json();
+                    
+                    statusLabel.textContent = '✅ System up to date';
+                    // Re-load the local data now that we have fresh records from sync
+                    loadLocalData();
+                } catch (error) {
+                    statusLabel.textContent = '⚠️ Sync delayed';
+                    console.error('Auto-sync failed:', error);
+                } finally {
+                    statusLabel.classList.remove('syncing');
+                    // Optional: Set a timer to sync again in 5 minutes
+                    setTimeout(autoSync, 300000); 
+                }
+            };
+
+            /**
+             * Helper to render UI tables
              */
             const renderTable = (containerId, items, type, isEarthquake = false) => {
                 const container = document.getElementById(containerId);
                 if (!items || items.length === 0) {
-                    container.innerHTML = `<p>No ${type.toLowerCase()} records found.</p>`;
+                    container.innerHTML = `<p>No recent ${type.toLowerCase()} activity.</p>`;
                     return;
                 }
 
                 let html = '<table><thead><tr>';
-                html += isEarthquake ? '<th>Region</th><th>Mag</th><th>Date</th>' : '<th>Title</th><th>Date</th>';
-                html += '</tr></thead><tbody>';
+                html += isEarthquake ? '<th>Region</th><th>Mag</th>' : '<th>Title</th>';
+                html += '<th>Date</th></tr></thead><tbody>';
 
                 items.forEach(item => {
-                    html += '<tr>';
+                    html += `<tr>`;
                     if (isEarthquake) {
                         html += `<td>${item.region}</td><td>${item.magnitude}</td>`;
                     } else {
                         html += `<td>${item.title}</td>`;
                     }
-                    html += `<td>${new Date(item.event_time).toLocaleString()}</td></tr>`;
+                    html += `<td>${new Date(item.event_time).toLocaleTimeString()}</td></tr>`;
                 });
                 html += '</tbody></table>';
                 container.innerHTML = html;
             };
 
-            /**
-             * Trigger Sync Button Logic
-             */
-            syncBtn.addEventListener('click', async () => {
-                syncBtn.disabled = true;
-                statusLabel.textContent = 'Synchronizing...';
-                
-                try {
-                    const response = await fetch('index.php?action=sync');
-                    const result = await response.json();
-                    
-                    statusLabel.textContent = result.message;
-                    // Reload data after successful sync
-                    loadData();
-                } catch (error) {
-                    statusLabel.textContent = 'Sync failed. Check console.';
-                    console.error('Sync Error:', error);
-                } finally {
-                    syncBtn.disabled = false;
-                }
-            });
-
-            // Initial load
-            loadData();
+            // Initial steps: load what we have, then start the
+            // auto-sync background process
+            loadLocalData();
+            autoSync();
         });
     </script>
+
+    <style>
+        .sync-status { font-size: 0.9rem; color: #666; margin-top: 5px; }
+        .syncing { color: #007bff; font-weight: bold; }
+    </style>
 </body>
 </html>

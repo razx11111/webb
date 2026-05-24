@@ -5,8 +5,8 @@ namespace App\Core;
 use PDO;
 use PDOException;
 
-// Makes the connection with PostgreSQL database using PDO
-// Using the Singleton model for not permitting the creation of multiple connections with the database.
+// Using the Singleton model for not permitting
+// the creation of multiple connections with the database
 class Database
 {
     private static $instance = null;
@@ -30,7 +30,7 @@ class Database
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
         } catch (PDOException $exception) {
-            // O aruncăm pentru a fi prinsă în Controller.
+            // Throw it to be caught in the Controller.
             throw new \Exception("Database Connection Error: " . $exception->getMessage());
         }
     }

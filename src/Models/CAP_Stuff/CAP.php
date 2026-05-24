@@ -287,7 +287,7 @@ class CAP {
 
     function __construct($post = "", $class = false) {
         if(is_array($post) && $class == false) {
-            f
+
         }
     }
 
