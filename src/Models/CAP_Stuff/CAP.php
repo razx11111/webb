@@ -2,6 +2,8 @@
 
 namespace App\Models\CAP_Stuff;
 
+require_once 'WriteXML.php';
+
 /**
  * Common Alerting Protocol (CAP) Model
  * 
@@ -105,7 +107,7 @@ class CAP {
      * @var string|null The code denoting the language of the info sub-element of the alert message (OPTIONAL).
      * Default: "en-US".
      */
-    public $language;
+    public $language=array();
 
     /**
      * @var array The code denoting the category of the subject event of the alert message (REQUIRED).
@@ -284,11 +286,169 @@ class CAP {
      * MUST NOT be used except in combination with the <altitude> element.
      */
     public $ceiling;
+    public $useingaclass = false;
 
     function __construct($post = "", $class = false) {
         if(is_array($post) && $class == false) {
-
+            foreach($post as $key => $value) {
+                if(property_exists($this, $key)) {
+                    $this->$key = $value;
+                }
+            }
+        }
+        elseif(is_string($post) && $class == true) {
+            $this->sent = $post;
+            $this->useingaclass = true;
         }
     }
 
+
+    public function buildCap() {
+        $xml = new xml('1.0', 'utf-8');
+        $xml->tagOpen('alert', ['xmlns' => 'urn:oasis:names:tc:emergency:cap:1.2']);
+
+        $xml->tagSimple('identifier', $this->identifier);
+        $xml->tagSimple('sender', $this->sender);
+
+        if ($this->useingaclass === false && is_array($this->sent)) {
+            if (empty($this->sent['plus'])) $this->sent['plus'] = "+";
+            $xml->tagSimple(
+                'sent',
+                date("Y-m-d\TH:i:s", strtotime($this->sent['date'] . " " . $this->sent['time'])) .
+                $this->sent['plus'] .
+                date("H:i", strtotime($this->sent['UTC']))
+            );
+        } else {
+            $xml->tagSimple('sent', $this->sent);
+        }
+
+        $xml->tagSimple('status', $this->status);
+        $xml->tagSimple('msgType', $this->msgType);
+        $xml->tagSimple('scope', $this->scope);
+
+        $xml->tagSimple('source', $this->source);
+        $xml->tagSimple('restriction', $this->restriction);
+        $xml->tagSimple('addresses', $this->addresses);
+        $xml->tagSimple('code', $this->code);
+        $xml->tagSimple('note', $this->note);
+        $xml->tagSimple('references', $this->references);
+        $xml->tagSimple('incidents', $this->incidents);
+
+        if (is_array($this->language) && count($this->language) > 0) {
+            foreach ($this->language as $lang) {
+                if (!empty($lang)) {
+                    $xml->tagOpen('info');
+
+                    $xml->tagSimple('language', $lang);
+
+                    $xml->tagSimple('category', is_array($this->category) ? implode(',', $this->category) : $this->category);
+
+                    // Handle event, headline, description, instruction as arrays or strings
+                    $event = $this->useingaclass === false && is_array($this->event) ? $this->event[$lang] ?? '' : $this->event;
+                    $headline = $this->useingaclass === false && is_array($this->headline) ? $this->headline[$lang] ?? '' : $this->headline;
+                    $description = $this->useingaclass === false && is_array($this->description) ? $this->description[$lang] ?? '' : $this->description;
+                    $instruction = $this->useingaclass === false && is_array($this->instruction) ? $this->instruction[$lang] ?? '' : $this->instruction;
+
+                    $xml->tagSimple('event', $event);
+                    $xml->tagSimple('responseType', is_array($this->responseType) ? implode(',', $this->responseType) : $this->responseType);
+                    $xml->tagSimple('urgency', $this->urgency);
+                    $xml->tagSimple('severity', $this->severity);
+                    $xml->tagSimple('certainty', $this->certainty);
+                    $xml->tagSimple('audience', $this->audience);
+
+                    // eventCode
+                    if (!empty($this->eventCode['valueName'][0])) {
+                        foreach ($this->eventCode['valueName'] as $key => $eventCode) {
+                            if (!empty($this->eventCode['valueName'][$key])) {
+                                $xml->tagOpen('eventCode');
+                                $xml->tagSimple('valueName', $this->eventCode['valueName'][$key]);
+                                $xml->tagSimple('value', $this->eventCode['value'][$key]);
+                                $xml->tagClose('eventCode');
+                            }
+                        }
+                    }
+
+                    // effective, onset, expires
+                    if ($this->useingaclass === false && is_array($this->effective)) {
+                        $xml->tagSimple(
+                            'effective',
+                            date("Y-m-d\TH:i:s", strtotime($this->effective['date'] . " " . $this->effective['time'])) .
+                            $this->effective['plus'] .
+                            date("H:i", strtotime($this->effective['UTC']))
+                        );
+                    } else {
+                        $xml->tagSimple('effective', $this->effective);
+                    }
+                    if ($this->useingaclass === false && is_array($this->onset)) {
+                        $xml->tagSimple (
+                            'onset',
+                            date("Y-m-d\TH:i:s", strtotime($this->onset['date'] . " " . $this->onset['time'])) .
+                            $this->onset['plus'] .
+                            date("H:i", strtotime($this->onset['UTC']))
+                        );
+                    } else {
+                        $xml->tagSimple('onset', $this->onset);
+                    }
+                    if ($this->useingaclass === false && is_array($this->expires)) {
+                        $xml->tagSimple(
+                            'expires',
+                            date("Y-m-d\TH:i:s", strtotime($this->expires['date'] . " " . $this->expires['time'])) .
+                            $this->expires['plus'] .
+                            date("H:i", strtotime($this->expires['UTC']))
+                        );
+                    } else {
+                        $xml->tagSimple('expires', $this->expires);
+                    }
+
+                    $xml->tagSimple('senderName', $this->senderName);
+                    $xml->tagSimple('headline', $headline);
+                    $xml->tagSimple('description', $description);
+                    $xml->tagSimple('instruction', $instruction);
+
+                    $xml->tagSimple('web', $this->web);
+                    $xml->tagSimple('contact', $this->contact);
+
+                    // parameter
+                    if (!empty($this->parameter['valueName'][0])) {
+                        foreach ($this->parameter['valueName'] as $key => $parameter) {
+                            if (!empty($this->parameter['valueName'][$key])) {
+                                $xml->tagOpen('parameter');
+                                $xml->tagSimple('valueName', $this->parameter['valueName'][$key]);
+                                $xml->tagSimple('value', $this->parameter['value'][$key]);
+                                $xml->tagClose('parameter');
+                            }
+                        }
+                    }
+
+                    // area
+                    if (!empty($this->areaDesc) || !empty($this->polygon) || !empty($this->circle) || !is_array($this->geocode)) {
+                        $xml->tagOpen('area');
+                        $xml->tagSimple('areaDesc', $this->areaDesc);
+                        $xml->tagSimple('polygon', is_array($this->polygon) ? implode(' ', $this->polygon) : $this->polygon);
+                        $xml->tagSimple('circle', is_array($this->circle) ? implode(' ', $this->circle) : $this->circle);
+
+                        // geocode
+                        if (!empty($this->geocode['value'][0])) {
+                            foreach ($this->geocode['value'] as $key => $geocode) {
+                                if (!empty($this->geocode['value'][$key])) {
+                                    $tmp_geocode = explode('<>', $this->geocode['value'][$key]);
+                                    $xml->tagOpen('geocode');
+                                    $xml->tagSimple('valueName', $tmp_geocode[1] ?? '');
+                                    $xml->tagSimple('value', $tmp_geocode[0] ?? '');
+                                    $xml->tagClose('geocode');
+                                }
+                            }
+                        }
+
+                        $xml->tagClose('area');
+                    }
+
+                    $xml->tagClose('info');
+                }
+            }
+        }
+
+        $xml->tagClose('alert');
+        $this->cap = $xml->output();
+    }
 }

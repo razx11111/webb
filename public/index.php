@@ -36,6 +36,8 @@ $router->get('/api/earthquakes', 'DisasterController', 'apiGetEarthquakes');
 $router->get('/api/fires', 'DisasterController', 'apiGetFires');
 $router->get('/api/floods', 'DisasterController', 'apiGetFloods');
 $router->get('/api/sync', 'DisasterController', 'sync');
+$router->get('/api/cap', 'DisasterController', 'generateCapFeed');
+$router->get('/api/cap/alert', 'DisasterController', 'exportSingleCap');
 
 // Run the application
 $router->run();

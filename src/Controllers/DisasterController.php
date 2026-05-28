@@ -6,156 +6,136 @@ use App\Models\Flood;
 use App\Models\Fire;
 use App\Models\Earthquake;
 use App\Services\DataSync;
+use App\Services\CAPService;
 
 /**
  * DisasterController
  * 
  * This controller manages the flow of disaster-related data.
- * In our SOA (Service-Oriented Architecture), it acts as the glue between
- * the data persistence layer (Models) and the presentation layer (Views/API).
  */
 class DisasterController {
-    /**
-     * Renders the Scholarly HTML Report.
-     */
-    public function report() {
-        // We include the Scholarly site
-        require_once __DIR__ . '/../../public/report.html';
-    }
-
-    /**
-     * Renders the main dashboard page.
-     * This is the default entry point for users visiting the site.
-     */
+    
     public function index() {
-        // We set a title variable that will be used inside the template
         $pageTitle = "Crisis Containment Dashboard";
-        
-        // Include the home template. Since we're not using a framework,
-        // we use standard PHP includes for view rendering.
         require_once __DIR__ . '/../../templates/pages/home.php';
     }
 
-    /**
-     * API Endpoint: Fetch latest disasters
-     * 
-     * Returns a JSON object containing both floods and fires.
-     * Used by the frontend Fetch API to update the UI without reloading.
-     */
     public function getDisasters() {
-        // Set the response header to JSON for API compatibility
         header('Content-Type: application/json');
-        
         try {
-            // Instantiate models to interact with the PostgreSQL database
             $floodModel = new Flood();
             $fireModel = new Fire();
             $earthquakeModel = new Earthquake();
-
-            // Aggregate data from all sources
             $data = [
                 'floods'      => $floodModel->getAll(20),
                 'fires'       => $fireModel->getAll(20),
                 'earthquakes' => $earthquakeModel->getAll(20)
             ];
-
-            // Send the JSON response
             echo json_encode($data);
         } catch (\Exception $e) {
-            // In case of database or logic errors, return a 500 status code
             http_response_code(500);
-            echo json_encode(['error' => 'Failed to fetch disaster data: ' . $e->getMessage()]);
+            echo json_encode(['error' => $e->getMessage()]);
         }
     }
 
-    /**
-     * Sync Endpoint: Triggers the GDACS synchronization
-     * 
-     * This method invokes the DataSync service to fetch fresh data from RSS.
-     * It's designed to be called via an AJAX request from the admin/dashboard.
-     */
     public function sync() {
         header('Content-Type: application/json');
         try {
-            // The DataSync service handles the heavy lifting of XML parsing
             $syncService = new DataSync();
             $syncService->syncExternalData();
-            
-            echo json_encode([
-                'status' => 'success', 
-                'message' => 'Data synchronization complete. Tables updated.'
-            ]);
+            echo json_encode(['status' => 'success', 'message' => 'Data synchronization complete.']);
         } catch (\Exception $e) {
             http_response_code(500);
-            echo json_encode([
-                'status' => 'error', 
-                'message' => 'Sync failed: ' . $e->getMessage()
-            ]);
-        }
-    }
-    // Go to floods page
-    public function getFloods()
-    {
-        $pageTitle = "Floods Management";
-        require_once __DIR__ . '/../../templates/pages/floods.php';
-    }
-    // Go to earthquakes page
-    public function getEarthquakes()
-    {
-        $pageTitle = "Earthquakes Management";
-        require_once __DIR__ . '/../../templates/pages/earthquakes.php';
-    }
-    // Go to fires page
-    public function getFires()
-    {
-        $pageTitle = "Fires Management";
-        require_once __DIR__ . '/../../templates/pages/fires.php';
-    }
-
-    /**
-     * API Endpoint: Fetch latest earthquakes only
-     */
-    public function apiGetEarthquakes() {
-        header('Content-Type: application/json');
-        try {
-            $earthquakeModel = new Earthquake();
-            $data = $earthquakeModel->getAll(50);
-            echo json_encode($data);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
         }
     }
 
-    /**
-     * API Endpoint: Fetch latest fires only
-     */
-    public function apiGetFires() {
-        header('Content-Type: application/json');
-        try {
-            $fireModel = new Fire();
-            // Fetching data using the generic getAll from BaseModel
-            $data = $fireModel->getAll(50);
-            echo json_encode($data);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+    public function generateCapFeed() {
+        $type = $_GET['type'] ?? 'all';
+        $limit = isset($_GET['latest']) ? (int)$_GET['latest'] : 15;
+        $floodModel = new Flood();
+        $fireModel = new Fire();
+        $earthquakeModel = new Earthquake();
+        $disasters = [];
+
+        if ($type === 'flood' || $type === 'all') {
+            foreach ($floodModel->getAll($limit) as $f) { $disasters[] = ['type' => 'flood', 'data' => $f]; }
         }
+        if ($type === 'fire' || $type === 'all') {
+            foreach ($fireModel->getAll($limit) as $f) { $disasters[] = ['type' => 'fire', 'data' => $f]; }
+        }
+        if ($type === 'earthquake' || $type === 'all') {
+            foreach ($earthquakeModel->getAll($limit) as $e) { $disasters[] = ['type' => 'earthquake', 'data' => $e]; }
+        }
+
+        usort($disasters, function($a, $b) {
+            return strtotime($b['data']['event_time']) - strtotime($a['data']['event_time']);
+        });
+
+        if (count($disasters) > $limit) $disasters = array_slice($disasters, 0, $limit);
+
+        header('Content-Type: application/rss+xml; charset=utf-8');
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<rss version="2.0" xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">' . "\n";
+        echo '<channel>' . "\n";
+        echo '<title>CoA Disaster Alert Feed</title>' . "\n";
+        echo '<link>http://localhost:8080/</link>' . "\n";
+        echo '<description>Latest CAP 1.2 alerts</description>' . "\n";
+        
+        $capService = new CAPService();
+        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
+
+        foreach ($disasters as $item) {
+            $data = $item['data'];
+            $internalXmlLink = $baseUrl . "/api/cap/alert?type=" . $item['type'] . "&id=" . $data['id'];
+            echo '<item>' . "\n";
+            echo '<title>' . htmlspecialchars($data['title'] ?? $data['region']) . '</title>' . "\n";
+            echo '<pubDate>' . date('r', strtotime($data['event_time'])) . '</pubDate>' . "\n";
+            echo '<link>' . htmlspecialchars($internalXmlLink) . '</link>' . "\n";
+            echo '<guid isPermaLink="true">' . htmlspecialchars($internalXmlLink) . '</guid>' . "\n";
+            $singleXml = $capService->generateXml($data, $item['type']);
+            echo preg_replace('/<\?xml[^>]+\?>\s*|<\?xml-stylesheet[^>]+\?>\s*/i', '', $singleXml) . "\n";
+            echo '</item>' . "\n";
+        }
+        echo '</channel></rss>';
     }
 
-    /**
-     * API Endpoint: Fetch latest floods only
-     */
-    public function apiGetFloods() {
-        header('Content-Type: application/json');
-        try {
-            $floodModel = new Flood();
-            // Return data as a clean JSON stream for the frontend
-            $data = $floodModel->getAll(50);
-            echo json_encode($data);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+    public function exportSingleCap() {
+        // We look for 'id' but also handle cases where XML entities might mess up the key (amp;id)
+        $type = $_GET['type'] ?? '';
+        $id = $_GET['id'] ?? ($_GET['amp;id'] ?? '');
+
+        if (!$type || !$id) {
+            http_response_code(400);
+            die("Error: Missing disaster type or ID.");
         }
+
+        $model = match($type) {
+            'flood' => new Flood(),
+            'fire' => new Fire(),
+            'earthquake' => new Earthquake(),
+            default => null
+        };
+
+        if (!$model) {
+            http_response_code(404);
+            die("Error: Invalid disaster type.");
+        }
+
+        $data = $model->getById($id);
+        if (!$data) {
+            http_response_code(404);
+            die("Error: Alert with ID $id not found in $type table.");
+        }
+
+        header('Content-Type: application/xml; charset=utf-8');
+        echo (new CAPService())->generateXml($data, $type);
     }
+
+    public function getFloods() { require_once __DIR__ . '/../../templates/pages/floods.php'; }
+    public function getEarthquakes() { require_once __DIR__ . '/../../templates/pages/earthquakes.php'; }
+    public function getFires() { require_once __DIR__ . '/../../templates/pages/fires.php'; }
+    public function apiGetFloods() { echo json_encode((new Flood())->getAll(50)); }
+    public function apiGetFires() { echo json_encode((new Fire())->getAll(50)); }
+    public function apiGetEarthquakes() { echo json_encode((new Earthquake())->getAll(50)); }
 }
