@@ -20,6 +20,7 @@
                 <div style="margin-bottom: 15px;">
                     <input type="text" id="country-search" placeholder="Search by country or region..." style="padding: 8px; width: 300px;">
                     <button id="search-btn" class="btn">Search</button>
+                    <button id="csv-btn" class="btn" style="background-color: #28a745; margin-left: 10px;">Download CSV</button>
                 </div>
                 <div id="earthquakes-table-container">
                     <p>Loading earthquake data...</p>
@@ -37,6 +38,7 @@
             const tableContainer = document.getElementById('earthquakes-table-container');
             const searchInput = document.getElementById('country-search');
             const searchBtn = document.getElementById('search-btn');
+            const csvBtn = document.getElementById('csv-btn');
 
             /**
              * Fetch data from the Clean API Endpoint (/api/earthquakes)
@@ -111,6 +113,14 @@
                 if (e.key === 'Enter') {
                     fetchEarthquakes(searchInput.value);
                 }
+            });
+
+            csvBtn.addEventListener('click', () => {
+                let url = '/api/csv?type=earthquake';
+                if (searchInput.value) {
+                    url += '&country=' + encodeURIComponent(searchInput.value);
+                }
+                window.location.href = url;
             });
 
             // Trigger the initial data fetch

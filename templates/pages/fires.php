@@ -20,6 +20,7 @@
                 <div style="margin-bottom: 15px;">
                     <input type="text" id="country-search" placeholder="Search by country or region..." style="padding: 8px; width: 300px;">
                     <button id="search-btn" class="btn">Search</button>
+                    <button id="csv-btn" class="btn" style="background-color: #28a745; margin-left: 10px;">Download CSV</button>
                 </div>
                 <div id="fires-table-container">
                     <p>Connecting to NASA FIRMS / GDACS...</p>
@@ -36,6 +37,7 @@
             const tableContainer = document.getElementById('fires-table-container');
             const searchInput = document.getElementById('country-search');
             const searchBtn = document.getElementById('search-btn');
+            const csvBtn = document.getElementById('csv-btn');
 
             const fetchFires = async (country = '') => {
                 try {
@@ -93,6 +95,14 @@
 
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') fetchFires(searchInput.value);
+            });
+
+            csvBtn.addEventListener('click', () => {
+                let url = '/api/csv?type=fire';
+                if (searchInput.value) {
+                    url += '&country=' + encodeURIComponent(searchInput.value);
+                }
+                window.location.href = url;
             });
 
             fetchFires();

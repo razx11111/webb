@@ -20,6 +20,7 @@
                 <div style="margin-bottom: 15px;">
                     <input type="text" id="country-search" placeholder="Search by country or region..." style="padding: 8px; width: 300px;">
                     <button id="search-btn" class="btn">Search</button>
+                    <button id="csv-btn" class="btn" style="background-color: #28a745; margin-left: 10px;">Download CSV</button>
                 </div>
                 <div id="floods-table-container">
                     <p>Fetching data from authorities...</p>
@@ -36,6 +37,7 @@
             const tableContainer = document.getElementById('floods-table-container');
             const searchInput = document.getElementById('country-search');
             const searchBtn = document.getElementById('search-btn');
+            const csvBtn = document.getElementById('csv-btn');
 
             const fetchFloods = async (country = '') => {
                 try {
@@ -93,6 +95,14 @@
 
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') fetchFloods(searchInput.value);
+            });
+
+            csvBtn.addEventListener('click', () => {
+                let url = '/api/csv?type=flood';
+                if (searchInput.value) {
+                    url += '&country=' + encodeURIComponent(searchInput.value);
+                }
+                window.location.href = url;
             });
 
             fetchFloods();

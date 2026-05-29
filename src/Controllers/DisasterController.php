@@ -140,6 +140,52 @@ class DisasterController {
         echo (new CAPService())->generateXml($data, $type);
     }
 
+    public function exportCsv() {
+        $type = $_GET['type'] ?? '';
+        $country = $_GET['country'] ?? null;
+        
+        // Dynamically instantiate the right model based on the URL parameter
+        $model = match($type) {
+            'flood' => new Flood(),
+            'fire' => new Fire(),
+            'earthquake' => new Earthquake(),
+            default => null
+        };
+
+        if (!$model) {
+            http_response_code(400);
+            die("Error: Invalid or missing disaster type for CSV export.");
+        }
+
+        // We fetch more records for the CSV so the user gets a solid dataset
+        $data = $model->getAll(500, $country); 
+
+        if (empty($data)) {
+            die("No data available to export.");
+        }
+
+        // Generate a nice filename with the current date
+        $filename = "{$type}_data_" . date('Y-m-d_H-i') . ".csv";
+
+        // Tell the browser to expect a file download instead of HTML
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        // Open the PHP output stream to write the CSV directly
+        $output = fopen('php://output', 'w');
+
+        // Put the column headings first (we get them from the keys of the first row)
+        fputcsv($output, array_keys($data[0]));
+
+        // Write each row of data into the CSV
+        foreach ($data as $row) {
+            fputcsv($output, $row);
+        }
+
+        fclose($output);
+        exit();
+    }
+
     public function getFloods() { $pageTitle = "Floods Management"; require_once __DIR__ . '/../../templates/pages/floods.php'; }
     public function getEarthquakes() { $pageTitle = "Earthquakes Management"; require_once __DIR__ . '/../../templates/pages/earthquakes.php'; }
     public function getFires() { $pageTitle = "Fires Management"; require_once __DIR__ . '/../../templates/pages/fires.php'; }
