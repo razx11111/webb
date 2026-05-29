@@ -23,6 +23,13 @@ $router = new Router();
 //Define Application Routes
 
 
+// Auth Routes
+$router->get('/login', 'AuthController', 'showLogin');
+$router->post('/login', 'AuthController', 'login');
+$router->get('/register', 'AuthController', 'showRegister');
+$router->post('/register', 'AuthController', 'register');
+$router->get('/logout', 'AuthController', 'logout');
+
 // UI Routes (Returning HTML)
 $router->get('/earthquakes', 'DisasterController', 'getEarthquakes');
 $router->get('/fires','DisasterController', 'getFires');

@@ -17,6 +17,10 @@
         <main>
             <div class="card">
                 <h2>Active Wildfire Detections</h2>
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="country-search" placeholder="Search by country or region..." style="padding: 8px; width: 300px;">
+                    <button id="search-btn" class="btn">Search</button>
+                </div>
                 <div id="fires-table-container">
                     <p>Connecting to NASA FIRMS / GDACS...</p>
                 </div>
@@ -30,11 +34,15 @@
          */
         document.addEventListener('DOMContentLoaded', () => {
             const tableContainer = document.getElementById('fires-table-container');
+            const searchInput = document.getElementById('country-search');
+            const searchBtn = document.getElementById('search-btn');
 
-            const fetchFires = async () => {
+            const fetchFires = async (country = '') => {
                 try {
+                    let url = '/api/fires';
+                    if (country) url += '?country=' + encodeURIComponent(country);
                     // Requesting JSON data from the clean API route
-                    const response = await fetch('/api/fires');
+                    const response = await fetch(url);
                     if (!response.ok) throw new Error('API unreachable');
 
                     const data = await response.json();
@@ -78,6 +86,14 @@
                 html += '</tbody></table>';
                 tableContainer.innerHTML = html;
             };
+
+            searchBtn.addEventListener('click', () => {
+                fetchFires(searchInput.value);
+            });
+
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') fetchFires(searchInput.value);
+            });
 
             fetchFires();
         });

@@ -15,6 +15,14 @@ use App\Services\CAPService;
  */
 class DisasterController {
     
+    /**
+     * Constructor - Runs automatically when the controller is created.
+     * We call our AuthMiddleware here to block anyone who isn't logged in.
+     */
+    public function __construct() {
+        \App\Core\AuthMiddleware::requireLogin();
+    }
+
     public function index() {
         $pageTitle = "Crisis Containment Dashboard";
         require_once __DIR__ . '/../../templates/pages/home.php';
@@ -132,10 +140,19 @@ class DisasterController {
         echo (new CAPService())->generateXml($data, $type);
     }
 
-    public function getFloods() { require_once __DIR__ . '/../../templates/pages/floods.php'; }
-    public function getEarthquakes() { require_once __DIR__ . '/../../templates/pages/earthquakes.php'; }
-    public function getFires() { require_once __DIR__ . '/../../templates/pages/fires.php'; }
-    public function apiGetFloods() { echo json_encode((new Flood())->getAll(50)); }
-    public function apiGetFires() { echo json_encode((new Fire())->getAll(50)); }
-    public function apiGetEarthquakes() { echo json_encode((new Earthquake())->getAll(50)); }
+    public function getFloods() { $pageTitle = "Floods Management"; require_once __DIR__ . '/../../templates/pages/floods.php'; }
+    public function getEarthquakes() { $pageTitle = "Earthquakes Management"; require_once __DIR__ . '/../../templates/pages/earthquakes.php'; }
+    public function getFires() { $pageTitle = "Fires Management"; require_once __DIR__ . '/../../templates/pages/fires.php'; }
+    public function apiGetFloods() { 
+        $country = $_GET['country'] ?? null;
+        echo json_encode((new Flood())->getAll(50, $country)); 
+    }
+    public function apiGetFires() { 
+        $country = $_GET['country'] ?? null;
+        echo json_encode((new Fire())->getAll(50, $country)); 
+    }
+    public function apiGetEarthquakes() { 
+        $country = $_GET['country'] ?? null;
+        echo json_encode((new Earthquake())->getAll(50, $country)); 
+    }
 }

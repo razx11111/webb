@@ -17,6 +17,10 @@
         <main>
             <div class="card">
                 <h2>Recent Seismic Activity</h2>
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="country-search" placeholder="Search by country or region..." style="padding: 8px; width: 300px;">
+                    <button id="search-btn" class="btn">Search</button>
+                </div>
                 <div id="earthquakes-table-container">
                     <p>Loading earthquake data...</p>
                 </div>
@@ -31,13 +35,19 @@
          */
         document.addEventListener('DOMContentLoaded', () => {
             const tableContainer = document.getElementById('earthquakes-table-container');
+            const searchInput = document.getElementById('country-search');
+            const searchBtn = document.getElementById('search-btn');
 
             /**
              * Fetch data from the Clean API Endpoint (/api/earthquakes)
              */
-            const fetchEarthquakes = async () => {
+            const fetchEarthquakes = async (country = '') => {
                 try {
-                    const response = await fetch('/api/earthquakes');
+                    let url = '/api/earthquakes';
+                    if (country) {
+                        url += '?country=' + encodeURIComponent(country);
+                    }
+                    const response = await fetch(url);
                     
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
@@ -92,6 +102,16 @@
                 html += '</tbody></table>';
                 tableContainer.innerHTML = html;
             };
+
+            searchBtn.addEventListener('click', () => {
+                fetchEarthquakes(searchInput.value);
+            });
+
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    fetchEarthquakes(searchInput.value);
+                }
+            });
 
             // Trigger the initial data fetch
             fetchEarthquakes();

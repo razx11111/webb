@@ -17,6 +17,10 @@
         <main>
             <div class="card">
                 <h2>Active Flood Alerts</h2>
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="country-search" placeholder="Search by country or region..." style="padding: 8px; width: 300px;">
+                    <button id="search-btn" class="btn">Search</button>
+                </div>
                 <div id="floods-table-container">
                     <p>Fetching data from authorities...</p>
                 </div>
@@ -30,11 +34,15 @@
          */
         document.addEventListener('DOMContentLoaded', () => {
             const tableContainer = document.getElementById('floods-table-container');
+            const searchInput = document.getElementById('country-search');
+            const searchBtn = document.getElementById('search-btn');
 
-            const fetchFloods = async () => {
+            const fetchFloods = async (country = '') => {
                 try {
+                    let url = '/api/floods';
+                    if (country) url += '?country=' + encodeURIComponent(country);
                     // Fetching from the specific clean API endpoint
-                    const response = await fetch('/api/floods');
+                    const response = await fetch(url);
                     if (!response.ok) throw new Error('Failed to reach server');
 
                     const data = await response.json();
@@ -78,6 +86,14 @@
                 html += '</tbody></table>';
                 tableContainer.innerHTML = html;
             };
+
+            searchBtn.addEventListener('click', () => {
+                fetchFloods(searchInput.value);
+            });
+
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') fetchFloods(searchInput.value);
+            });
 
             fetchFloods();
         });

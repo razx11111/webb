@@ -13,10 +13,18 @@ abstract class BaseModel {
         $this->db = Database::getInstance()->getConnection();
     }
 
-    public function getAll($limit = 50) {
-        $sql = "SELECT * FROM {$this->table} ORDER BY event_time DESC LIMIT :limit";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    public function getAll($limit = 50, $country = null) {
+        if ($country) {
+            $column = ($this->table === 'earthquakes') ? 'region' : 'title';
+            $sql = "SELECT * FROM {$this->table} WHERE {$column} ILIKE :country ORDER BY event_time DESC LIMIT :limit";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':country', '%' . $country . '%', PDO::PARAM_STR);
+        } else {
+            $sql = "SELECT * FROM {$this->table} ORDER BY event_time DESC LIMIT :limit";
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        }
         $stmt->execute();
         return $stmt->fetchAll();
     }
@@ -30,7 +38,7 @@ abstract class BaseModel {
 
      // Generic create method to insert data into the table.
     public function create(array $data) {
-        // Extracting keys (column names) from the associative array
+        // Extracting column names from the associative array
         $columns = implode(', ', array_keys($data));
         
         // Creating named placeholders for the prepared statement (e.g., :magnitude, :latitude)

@@ -43,3 +43,28 @@ CREATE TABLE fires (
     source VARCHAR(100) DEFAULT 'GDACS/EFFIS',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Authentication Tables
+
+-- Regular Users Table (Can sign up)
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL, -- Never store plain passwords!
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Administrators Table (Manual DB insertion only)
+CREATE TABLE admins (
+    id SERIAL PRIMARY KEY,
+    nume VARCHAR(50) NOT NULL,
+    prenume VARCHAR(50) NOT NULL,
+    nr_tel VARCHAR(20) UNIQUE NOT NULL, -- Used as the login identifier
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Example Admin Insert (Password is 'admin123' hashed with bcrypt)
+-- HASH generation: password_hash('admin123', PASSWORD_DEFAULT)
+-- INSERT INTO admins (nume, prenume, nr_tel, password_hash) VALUES ('Admin', 'Sef', '0700000000', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
