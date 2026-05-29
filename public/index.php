@@ -30,6 +30,11 @@ $router->get('/register', 'AuthController', 'showRegister');
 $router->post('/register', 'AuthController', 'register');
 $router->get('/logout', 'AuthController', 'logout');
 
+// Shelter Routes (Admin & API)
+$router->get('/admin/shelters', 'ShelterController', 'adminIndex');
+$router->post('/admin/shelters/add', 'ShelterController', 'addShelter');
+$router->get('/api/shelters', 'ShelterController', 'apiGetShelters');
+
 // UI Routes (Returning HTML)
 $router->get('/earthquakes', 'DisasterController', 'getEarthquakes');
 $router->get('/fires','DisasterController', 'getFires');

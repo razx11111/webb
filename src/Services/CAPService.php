@@ -40,6 +40,22 @@ class CAPService {
         $xml->tagSimple("cap:certainty", $cap->certainty);
         $xml->tagSimple("cap:headline", $cap->headline);
         $xml->tagSimple("cap:description", $cap->description);
+
+        // Include available shelters in the instructions
+        $shelterModel = new \App\Models\Shelter();
+        $shelters = $shelterModel->getAll(5); // Get up to 5 shelters
+        $instructionText = "Please proceed to the nearest safe shelter. Available shelters: ";
+        if (!empty($shelters)) {
+            $shelterList = [];
+            foreach ($shelters as $s) {
+                $shelterList[] = "{$s['name']} (Lat: {$s['latitude']}, Lng: {$s['longitude']})";
+            }
+            $instructionText .= implode(", ", $shelterList);
+        } else {
+            $instructionText .= "None currently listed in the system.";
+        }
+        $xml->tagSimple("cap:instruction", $instructionText);
+
         $xml->tagSimple("cap:web", $cap->web);
 
         $xml->tagOpen("cap:resource");
