@@ -6,6 +6,8 @@
     <title><?= APP_NAME ?> - Earthquakes</title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/home.css">
+    <!-- Leaflet CSS for OpenStreetMap -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 </head>
 <body>
     <div class="container">
@@ -22,6 +24,10 @@
                     <button id="search-btn" class="btn">Search</button>
                     <button id="csv-btn" class="btn" style="background-color: #28a745; margin-left: 10px;">Download CSV</button>
                 </div>
+                
+                <!-- Map Container -->
+                <div id="map" style="height: 400px; margin-bottom: 20px; border: 1px solid #ccc; z-index: 1;"></div>
+
                 <div id="earthquakes-table-container">
                     <p>Loading earthquake data...</p>
                 </div>
@@ -29,6 +35,8 @@
         </main>
     </div>
 
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script>
         /**
          * AJAX Implementation for Earthquake Data
@@ -39,6 +47,16 @@
             const searchInput = document.getElementById('country-search');
             const searchBtn = document.getElementById('search-btn');
             const csvBtn = document.getElementById('csv-btn');
+
+            // Initialize OpenStreetMap via Leaflet
+            // Set default view to a global perspective
+            const map = L.map('map').setView([20, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Keep track of markers so we can clear them when searching
+            let markersLayer = L.layerGroup().addTo(map);
 
             /**
              * Fetch data from the Clean API Endpoint (/api/earthquakes)
@@ -57,9 +75,44 @@
 
                     const data = await response.json();
                     renderTable(data);
+                    updateMap(data);
                 } catch (error) {
                     console.error('Fetch error:', error);
                     tableContainer.innerHTML = '<p class="error">Failed to load data. Please try again later.</p>';
+                }
+            };
+
+            const updateMap = (earthquakes) => {
+                // Clear old markers from the map
+                markersLayer.clearLayers();
+
+                if (!earthquakes || earthquakes.length === 0) return;
+
+                const bounds = [];
+
+                earthquakes.forEach(eq => {
+                    if (eq.latitude && eq.longitude) {
+                        const lat = parseFloat(eq.latitude);
+                        const lng = parseFloat(eq.longitude);
+                        
+                        // Add marker with a popup containing details
+                        const marker = L.marker([lat, lng]);
+                        marker.bindPopup(`
+                            <strong>Earthquake in ${eq.region}</strong><br>
+                            Magnitude: ${eq.magnitude} ${eq.magnitude_type}<br>
+                            Depth: ${eq.depth} km<br>
+                            Time: ${new Date(eq.event_time).toLocaleString()}
+                        `);
+                        markersLayer.addLayer(marker);
+
+                        // Save coordinates to calculate map zoom later
+                        bounds.push([lat, lng]);
+                    }
+                });
+
+                // Automatically zoom and pan the map to fit all new markers perfectly!
+                if (bounds.length > 0) {
+                    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
                 }
             };
 
