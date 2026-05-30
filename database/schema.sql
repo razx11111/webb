@@ -65,6 +65,17 @@ CREATE TABLE admins (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Emergency Shelters Table
+-- Managed by Administrators, displayed to users during alerts
+CREATE TABLE shelters (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    latitude DECIMAL(9,6) NOT NULL,
+    longitude DECIMAL(9,6) NOT NULL,
+    capacity INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Example Admin Insert (Password is 'admin123' hashed with bcrypt)
 -- HASH generation: password_hash('admin123', PASSWORD_DEFAULT)
 -- INSERT INTO admins (nume, prenume, nr_tel, password_hash) VALUES ('Admin', 'Sef', '0700000000', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');

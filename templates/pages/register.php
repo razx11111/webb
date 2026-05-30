@@ -2,28 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account - Crisis Containment</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-    <div style="max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ccc;">
-        <h2>User Registration</h2>
+<body class="auth-wrapper">
+    <main class="auth-card">
+        <header>
+            <h2>User Registration</h2>
+        </header>
+
         <form action="/register" method="POST">
-            <div style="margin-bottom: 10px;">
-                <label>Username:</label><br>
-                <input type="text" name="username" required>
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" name="username" id="username" class="form-control" required>
             </div>
-            <div style="margin-bottom: 10px;">
-                <label>Email:</label><br>
-                <input type="email" name="email" required>
+
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" name="email" id="email" class="form-control" required>
             </div>
-            <div style="margin-bottom: 10px;">
-                <label>Password:</label><br>
-                <input type="password" name="password" required>
+
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" name="password" id="password" class="form-control" required>
             </div>
-            <button type="submit">Create account</button>
+
+            <button type="submit" class="btn btn-primary">Create Account</button>
         </form>
-        <p><a href="/login">Back to login</a></p>
-    </div>
+
+        <footer>
+            <p>
+                <a href="/login">Already have an account? Back to login.</a>
+            </p>
+        </footer>
+    </main>
 </body>
 </html>
