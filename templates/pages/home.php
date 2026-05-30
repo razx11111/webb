@@ -20,6 +20,11 @@
             <a href="/earthquakes" class="btn">Earthquakes</a>
             <a href="/fires" class="btn">Fires</a>
             <a href="/report" class="btn">Report</a>
+            <?php if (isset($_SESSION['user_id'])): ?>
+                <a href="/logout" class="btn btn-logout">Logout</a>
+            <?php else: ?>
+                <a href="/login" class="btn">Login</a>
+            <?php endif; ?>
         </nav>
 
         <main class="dashboard-grid">
@@ -118,10 +123,5 @@
             autoSync();
         });
     </script>
-
-    <style>
-        .sync-status { font-size: 0.9rem; color: #666; margin-top: 5px; }
-        .syncing { color: #007bff; font-weight: bold; }
-    </style>
 </body>
 </html>
