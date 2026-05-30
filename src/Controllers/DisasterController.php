@@ -106,6 +106,7 @@ class DisasterController {
     public function getFloods() { $pageTitle = "Floods Management"; require_once __DIR__ . '/../../templates/pages/floods.php'; }
     public function getEarthquakes() { $pageTitle = "Earthquakes Management"; require_once __DIR__ . '/../../templates/pages/earthquakes.php'; }
     public function getFires() { $pageTitle = "Fires Management"; require_once __DIR__ . '/../../templates/pages/fires.php'; }
+    public function report() { $pageTitle = "Disaster Report Generation"; require_once __DIR__ . '/../../templates/pages/report.php'; }
     public function apiGetFloods() { 
         $country = $_GET['country'] ?? null;
         echo json_encode((new Flood())->getAll(50, $country)); 

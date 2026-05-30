@@ -15,6 +15,7 @@
 
     <div class="container">
         <nav class="navigation-menu">
+<<<<<<< HEAD
             <a href="/floods" class="btn btn-nav">Floods</a>
             <a href="/earthquakes" class="btn btn-nav">Earthquakes</a>
             <a href="/fires" class="btn btn-nav">Fires</a>
@@ -27,6 +28,16 @@
                 <a href="/logout" class="btn btn-nav" style="border-color: #dc3545; color: #dc3545;">Logout (<?= htmlspecialchars($_SESSION['name'] ?? 'User') ?>)</a>
             <?php else: ?>
                 <a href="/login" class="btn btn-nav">Login</a>
+=======
+            <a href="/floods" class="btn">Floods</a>
+            <a href="/earthquakes" class="btn">Earthquakes</a>
+            <a href="/fires" class="btn">Fires</a>
+            <a href="/report" class="btn">Report</a>
+            <?php if (isset($_SESSION['user_id'])): ?>
+                <a href="/logout" class="btn btn-logout">Logout</a>
+            <?php else: ?>
+                <a href="/login" class="btn">Login</a>
+>>>>>>> 69909eefd5f1a3c0f850aa329a194453a87ce25d
             <?php endif; ?>
         </nav>
 
