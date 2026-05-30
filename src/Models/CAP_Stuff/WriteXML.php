@@ -27,7 +27,7 @@ class xml {
         }
         else {
             if($tag == 'summary'){
-                $row.= ($this->gt);
+                $row.= '>';
                 $row.= 'No Summary';
                 $row.= ('</'.$tag.'>');
             }
