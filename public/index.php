@@ -48,6 +48,7 @@ $router->get('/api/earthquakes', 'DisasterController', 'apiGetEarthquakes');
 $router->get('/api/fires', 'DisasterController', 'apiGetFires');
 $router->get('/api/floods', 'DisasterController', 'apiGetFloods');
 $router->get('/api/sync', 'DisasterController', 'sync');
+$router->get('/api/proximity-check', 'DisasterController', 'checkProximity');
 $router->get('/api/cap', 'CAPController', 'generateCapFeed');
 $router->get('/api/cap/alert', 'CAPController', 'exportSingleCap');
 $router->get('/api/csv', 'DisasterController', 'exportCsv');

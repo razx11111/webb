@@ -4,6 +4,7 @@ namespace App\Models;
 
 class Admin extends BaseModel {
     protected $table = 'admins';
+    protected $orderBy = 'created_at';
 
     // Admins log in using their phone number or maybe a combination, 
     // but typically a username or specific field is needed. 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 class User extends BaseModel {
     protected $table = 'users';
+    protected $orderBy = 'created_at';
 
     public function findByEmail($email) {
         $sql = "SELECT * FROM {$this->table} WHERE email = :email LIMIT 1";

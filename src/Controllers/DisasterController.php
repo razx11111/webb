@@ -119,4 +119,124 @@ class DisasterController {
         $country = $_GET['country'] ?? null;
         echo json_encode((new Earthquake())->getAll(50, $country)); 
     }
+
+    /**
+     * API: Check if coordinates are near any disaster and find nearest shelter.
+     * Accessible via /api/proximity-check?lat=...&lng=...
+     */
+    public function checkProximity() {
+        header('Content-Type: application/json');
+        
+        $userLat = isset($_GET['lat']) ? (float)$_GET['lat'] : null;
+        $userLng = isset($_GET['lng']) ? (float)$_GET['lng'] : null;
+
+        if ($userLat === null || $userLng === null) {
+            echo json_encode(['error' => 'Missing coordinates']);
+            return;
+        }
+
+        $dangerRadius = 100; // km
+        $inDanger = false;
+        $detectedDisaster = null;
+        $currentTime = time();
+        $oneHourAgo = $currentTime - 3600; // 3600 seconds = 1 hour
+
+        // 1. Get all recent disasters (fetching more to ensure we cover the last hour)
+        $floodModel = new Flood();
+        $fireModel = new Fire();
+        $earthquakeModel = new Earthquake();
+
+        $disasters = array_merge(
+            $floodModel->getAll(50),
+            $fireModel->getAll(50),
+            $earthquakeModel->getAll(50)
+        );
+
+        // 2. Check if user is near any disaster that happened in the last hour
+        foreach ($disasters as $d) {
+            $eventTime = strtotime($d['event_time']);
+            
+            // Skip disasters older than 1 hour
+            if ($eventTime < $oneHourAgo) {
+                continue;
+            }
+
+            $dist = $this->calculateDistance($userLat, $userLng, (float)$d['latitude'], (float)$d['longitude']);
+            if ($dist <= $dangerRadius) {
+                $inDanger = true;
+                
+                // Determine type and severity
+                $type = 'unknown';
+                $severity = 'Moderate';
+                
+                if (isset($d['magnitude'])) {
+                    $type = 'Earthquake';
+                    $mag = (float)$d['magnitude'];
+                    $severity = ($mag >= 6) ? 'Extreme' : (($mag >= 4.5) ? 'Severe' : 'Moderate');
+                } elseif (strpos($this->get_class_name($d), 'Flood') !== false || isset($d['title']) && strpos(strtolower($d['title']), 'flood') !== false) {
+                    $type = 'Flood';
+                    $severity = 'Severe';
+                } else {
+                    $type = 'Fire';
+                    $severity = 'Extreme';
+                }
+
+                $detectedDisaster = [
+                    'name' => $d['title'] ?? ($d['region'] ?? 'Natural Hazard'),
+                    'type' => $type,
+                    'severity' => $severity,
+                    'distance' => round($dist, 2)
+                ];
+                break;
+            }
+        }
+
+        // 3. If in danger, find the nearest shelter
+        $nearestShelter = null;
+        if ($inDanger) {
+            $shelterModel = new \App\Models\Shelter();
+            $shelters = $shelterModel->getAll(50);
+            $minDist = INF;
+
+            foreach ($shelters as $s) {
+                $dist = $this->calculateDistance($userLat, $userLng, (float)$s['latitude'], (float)$s['longitude']);
+                if ($dist < $minDist) {
+                    $minDist = $dist;
+                    $nearestShelter = [
+                        'name' => $s['name'],
+                        'distance' => round($dist, 2)
+                    ];
+                }
+            }
+        }
+
+        echo json_encode([
+            'inDanger' => $inDanger,
+            'details'  => $detectedDisaster ?? null,
+            'shelter'  => $nearestShelter
+        ]);
+    }
+
+    /**
+     * Helper to guess type if model info is lost in array merge
+     */
+    private function get_class_name($var) {
+        return gettype($var); // Simplified for now since we merged arrays
+    }
+
+    /**
+     * Helper: Haversine Formula for distance between two points in km.
+     */
+    private function calculateDistance($lat1, $lon1, $lat2, $lon2) {
+        $earthRadius = 6371;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        
+        $a = sin($dLat/2) * sin($dLat/2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon/2) * sin($dLon/2);
+        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+        
+        return $earthRadius * $c;
+    }
 }

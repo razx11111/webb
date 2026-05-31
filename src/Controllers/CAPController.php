@@ -25,6 +25,23 @@ class CAPController {
         $type = $_GET['type'] ?? 'all';
         $limit = isset($_GET['latest']) ? (int)$_GET['latest'] : 15;
 
+        // Lazy Sync Logic: Ensure data is fresh
+        $syncFile = sys_get_temp_dir() . '/coa_last_sync.txt';
+        $currentTime = time();
+        $lastSync = file_exists($syncFile) ? (int)file_get_contents($syncFile) : 0;
+
+        // If more than 10 minutes (600 seconds) have passed, trigger sync
+        if (($currentTime - $lastSync) > 600) {
+            try {
+                $syncService = new \App\Services\DataSync();
+                $syncService->syncExternalData();
+                file_put_contents($syncFile, $currentTime);
+            } catch (\Exception $e) {
+                // Log error but continue to serve whatever data we have
+                error_log("Lazy Sync failed: " . $e->getMessage());
+            }
+        }
+
         $floodModel = new Flood();
         $fireModel = new Fire();
         $earthquakeModel = new Earthquake();
@@ -33,7 +50,7 @@ class CAPController {
 
         // Aggregate disasters based on type
         if ($type === 'flood' || $type === 'all') {
-            foreach ($floodModel->getAll($limit) as $f) { $disasters[] = ['type' => 'flood', 'data' => $f]; }
+            foreach ($floodModel->getAll($limit) as $fl) { $disasters[] = ['type' => 'flood', 'data' => $fl]; }
         }
         if ($type === 'fire' || $type === 'all') {
             foreach ($fireModel->getAll($limit) as $f) { $disasters[] = ['type' => 'fire', 'data' => $f]; }

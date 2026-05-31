@@ -9,6 +9,7 @@ namespace App\Models;
  */
 class Shelter extends BaseModel {
     protected $table = 'shelters';
+    protected $orderBy = 'created_at';
 
     /**
      * Persists a new shelter location.

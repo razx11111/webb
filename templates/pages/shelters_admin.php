@@ -6,113 +6,204 @@
     <title><?= APP_NAME ?> - Manage Shelters</title>
     <link rel="stylesheet" href="/css/style.css">
     
+    <!-- Leaflet.js Assets -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <style>
-        #map { height: 500px; width: 100%; border-radius: 8px; margin-bottom: 20px; }
-        .shelter-form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        .btn-save { background-color: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
-        .coords-info { background: #e9ecef; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-family: monospace; }
+        /* Essential layout for the map and split view */
+        #map { height: 450px; width: 100%; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; z-index: 1; }
+        .admin-grid { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+        .shelter-list-section { margin-top: 30px; }
+        .shelter-form { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .coords-badge { background: #e3f2fd; color: #1976d2; padding: 5px 10px; border-radius: 4px; font-family: monospace; display: block; margin-bottom: 15px; }
     </style>
 </head>
 <body>
+    <header class="dashboard-header" style="background-color: #2c3e50; color: white; padding: 1rem; text-align: center;">
+        <h1>Manage Emergency Shelters</h1>
+        <p>Current logged in as: <?= htmlspecialchars($_SESSION['name'] ?? 'Admin') ?></p>
+    </header>
+
     <div class="container">
-        <header>
-            <h1>Manage Shelters</h1>
-            <nav>
-                <a href="/" class="btn">Dashboard</a>
-            </nav>
-        </header>
+        <nav class="navigation-menu" style="margin-bottom: 20px;">
+            <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
+        </nav>
 
         <main>
-            <section class="map-section">
-                <h2>1. Select Location on Map</h2>
-                <p>Click anywhere on the map to set the coordinates for a new shelter.</p>
-                <div id="map"></div>
-            </section>
+            <div class="admin-grid">
+                <!-- Map View -->
+                <section class="map-container">
+                    <header>
+                        <h2>1. Shelter Map</h2>
+                        <p>Blue markers are existing shelters. Click on the map to place a NEW shelter (Red marker).</p>
+                    </header>
+                    <div id="map"></div>
+                </section>
 
-            <section class="form-section">
-                <h2>2. Shelter Details</h2>
-                <?php if(isset($_GET['success'])): ?>
-                    <p style="color: green; font-weight: bold;">✅ Shelter added successfully!</p>
-                <?php endif; ?>
+                <!-- Add Form -->
+                <section class="form-container">
+                    <header>
+                        <h2>2. Shelter Details</h2>
+                    </header>
+                    
+                    <?php if(isset($_GET['success'])): ?>
+                        <div class="alert-success">✅ Shelter added successfully!</div>
+                    <?php endif; ?>
 
-                <form action="/admin/shelters/add" method="POST" class="shelter-form">
-                    <div class="coords-info">
-                        <strong>Latitude:</strong> <span id="display-lat">None</span> | 
-                        <strong>Longitude:</strong> <span id="display-lng">None</span>
-                    </div>
+                    <form action="/admin/shelters/add" method="POST" class="shelter-form">
+                        <div class="form-group">
+                            <label>Coordinates (Click map or type):</label>
+                            <div class="controls-bar" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                <div>
+                                    <small>Latitude</small>
+                                    <input type="text" name="latitude" id="input-lat" class="form-control" placeholder="0.000000" required>
+                                </div>
+                                <p></p>
+                                <div>
+                                    <small>Longitude</small>
+                                    <input type="text" name="longitude" id="input-lng" class="form-control" placeholder="0.000000" required>
+                                </div>
+                            </div>
+                        </div>
 
-                    <!-- Hidden fields to store coordinates -->
-                    <input type="hidden" name="latitude" id="input-lat" required>
-                    <input type="hidden" name="longitude" id="input-lng" required>
+                        <div class="form-group">
+                            <label for="name">Shelter Name:</label>
+                            <input type="text" name="name" id="name" class="form-control" placeholder="e.g. North Hall Shelter" required>
+                        </div>
 
-                    <div class="form-group">
-                        <label for="name">Shelter Name:</label>
-                        <input type="text" name="name" id="name" placeholder="e.g. Community Center A" required>
-                    </div>
+                        <div class="form-group">
+                            <label for="capacity">Estimated Capacity:</label>
+                            <input type="number" name="capacity" id="capacity" class="form-control" placeholder="Max persons">
+                        </div>
 
-                    <div class="form-group">
-                        <label for="capacity">Capacity (Optional):</label>
-                        <input type="number" name="capacity" id="capacity" placeholder="e.g. 200">
-                    </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Save Shelter</button>
+                    </form>
+                </section>
+            </div>
 
-                    <button type="submit" class="btn-save">Save Shelter</button>
-                </form>
+            <!-- Descriptive List -->
+            <section class="shelter-list-section card">
+                <header>
+                    <h2>Existing Shelters Registry</h2>
+                </header>
+                <div class="table-responsive">
+                    <table id="shelters-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Coordinates</th>
+                                <th>Capacity</th>
+                                <th>Added On</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shelters-list-body">
+                            <tr><td colspan="4">Loading shelters...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
         </main>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Initialize map centered at a default location (e.g., Iasi)
-            const map = L.map('map').setView([47.173780, 27.574728], 20);
+            // Setup map centered on a general area
+            const map = L.map('map').setView([47.15, 27.60], 12);
 
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
-            const marker = L.marker([0, 0]);
-            const latDisplay = document.getElementById('display-lat');
-            const lngDisplay = document.getElementById('display-lng');
+            // Special marker for the "New Selection"
+            const newMarkerIcon = L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
+            
+            const selectionMarker = L.marker([0, 0], { icon: newMarkerIcon });
+            
             const latInput = document.getElementById('input-lat');
             const lngInput = document.getElementById('input-lng');
+            const tableBody = document.getElementById('shelters-list-body');
 
-            // Handle map click
-            map.on('click', function(e) {
-                const lat = e.latlng.lat.toFixed(6);
-                const lng = e.latlng.lng.toFixed(6);
+            /**
+             * Updates the selection marker based on current input values
+             */
+            const updateMarkerFromInputs = () => {
+                const lat = parseFloat(latInput.value);
+                const lng = parseFloat(lngInput.value);
 
-                // Update UI
-                latDisplay.textContent = lat;
-                lngDisplay.textContent = lng;
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    const latlng = L.latLng(lat, lng);
+                    selectionMarker.setLatLng(latlng).addTo(map);
+                    selectionMarker.bindPopup("<strong>Manually Entered Location</strong>").openPopup();
+                }
+            };
+
+            // Listen for manual typing
+            latInput.addEventListener('input', updateMarkerFromInputs);
+            lngInput.addEventListener('input', updateMarkerFromInputs);
+
+            // 1. Load existing shelters
+            const loadShelters = async () => {
+                try {
+                    const response = await fetch('/api/shelters');
+                    const shelters = await response.json();
+                    
+                    if (shelters.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="4">No shelters registered yet.</td></tr>';
+                        return;
+                    }
+
+                    tableBody.innerHTML = '';
+                    const mapMarkers = [];
+
+                    shelters.forEach(s => {
+                        // Add to Map (Default Blue Marker)
+                        const m = L.marker([s.latitude, s.longitude])
+                            .addTo(map)
+                            .bindPopup(`<strong>${s.name}</strong><br>Capacity: ${s.capacity || 'N/A'}`);
+                        
+                        mapMarkers.push([s.latitude, s.longitude]);
+
+                        // Add to Table
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>${s.name}</strong></td>
+                            <td>${s.latitude}, ${s.longitude}</td>
+                            <td>${s.capacity || 'Unknown'}</td>
+                            <td>${new Date(s.created_at).toLocaleDateString()}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+
+                    // Auto-zoom map to show all markers if they exist
+                    if (mapMarkers.length > 0) {
+                        map.fitBounds(L.latLngBounds(mapMarkers).pad(0.1));
+                    }
+                } catch (e) {
+                    console.error("Error loading shelters:", e);
+                    tableBody.innerHTML = '<tr><td colspan="4" class="text-danger">Failed to load registry.</td></tr>';
+                }
+            };
+
+            // 2. Handle map clicks for NEW shelter
+            map.on('click', (e) => {
+                const { lat, lng } = e.latlng;
                 
-                // Set form values
-                latInput.value = lat;
-                lngInput.value = lng;
+                latInput.value = lat.toFixed(6);
+                lngInput.value = lng.toFixed(6);
 
-                // Move marker
-                marker.setLatLng(e.latlng).addTo(map);
+                selectionMarker.setLatLng(e.latlng).addTo(map);
+                selectionMarker.bindPopup("<strong>Selected Location</strong>").openPopup();
             });
 
-            // Fetch and show existing shelters
-            fetch('/api/shelters')
-                .then(res => res.json())
-                .then(data => {
-                    data.forEach(shelter => {
-                        L.circle([shelter.latitude, shelter.longitude], {
-                            color: 'green',
-                            fillColor: '#28a745',
-                            fillOpacity: 0.5,
-                            radius: 500
-                        }).addTo(map).bindPopup(`<b>${shelter.name}</b><br>Capacity: ${shelter.capacity || 'Unknown'}`);
-                    });
-                });
+            loadShelters();
         });
     </script>
 </body>
