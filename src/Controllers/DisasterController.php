@@ -135,7 +135,7 @@ class DisasterController {
             return;
         }
 
-        $dangerRadius = 100; // km
+        $dangerRadius = 10000; // km
         $inDanger = false;
         $detectedDisaster = null;
         $currentTime = time();
@@ -204,7 +204,9 @@ class DisasterController {
                     $minDist = $dist;
                     $nearestShelter = [
                         'name' => $s['name'],
-                        'distance' => round($dist, 2)
+                        'distance' => round($dist, 2),
+                        'lat' => (float)$s['latitude'],
+                        'lng' => (float)$s['longitude']
                     ];
                 }
             }

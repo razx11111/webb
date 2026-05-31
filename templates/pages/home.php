@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="/css/style.css?v=<?= time() ?>">
     <link rel="stylesheet" href="/css/home.css?v=<?= time() ?>">
 
+    <!-- Leaflet.js for Emergency Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <style>
         /* FAIL-SAFE MODAL STYLES */
         #alert-overlay {
@@ -64,6 +68,16 @@
             border-radius: 10px;
         }
 
+        #popup-map {
+            height: 280px;
+            width: 100%;
+            margin-top: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            z-index: 10002;
+            background: #f9f9f9;
+        }
+
         .popup-footer {
             padding: 20px;
             background: #f7fafc;
@@ -102,6 +116,7 @@
                     <h3 style="margin-top: 0;">Nearest Safe Shelter</h3>
                     <p id="nearest-shelter-name" style="font-weight: bold; font-size: 1.2rem; color: #2c3e50; margin: 5px 0;"></p>
                     <p id="shelter-distance" style="color: #4a5568; margin: 0;"></p>
+                    <div id="popup-map"></div>
                 </div>
                 <p>Please evacuate immediately.</p>
             </div>
@@ -113,6 +128,7 @@
 
     <header class="dashboard-header">
         <h1><?= APP_NAME ?></h1>
+        <p id="sync-indicator" class="sync-status">Checking for updates...</p>
     </header>
 
     <div class="container">
@@ -164,6 +180,9 @@
             const shelterNameDisplay = document.getElementById('nearest-shelter-name');
             const shelterDistDisplay = document.getElementById('shelter-distance');
 
+            let popupMap = null;
+            let shelterMarker = null;
+
             const checkSafetyStatus = async (lat, lng) => {
                 try {
                     const response = await fetch(`/api/proximity-check?lat=${lat}&lng=${lng}`);
@@ -176,8 +195,27 @@
                             shelterNameDisplay.textContent = result.shelter.name;
                             shelterDistDisplay.textContent = `${result.shelter.distance} km away`;
                         }
+
                         overlay.style.setProperty('display', 'flex', 'important');
                         document.body.classList.add('no-scroll');
+
+                        // Map Initialization
+                        if (result.shelter && result.shelter.lat) {
+                            setTimeout(() => {
+                                if (!popupMap) {
+                                    popupMap = L.map('popup-map').setView([result.shelter.lat, result.shelter.lng], 14);
+                                    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(popupMap);
+                                } else {
+                                    popupMap.setView([result.shelter.lat, result.shelter.lng], 14);
+                                }
+                                
+                                if (shelterMarker) popupMap.removeLayer(shelterMarker);
+                                shelterMarker = L.marker([result.shelter.lat, result.shelter.lng]).addTo(popupMap)
+                                    .bindPopup(`<b>${result.shelter.name}</b>`).openPopup();
+                                
+                                popupMap.invalidateSize();
+                            }, 400);
+                        }
                     }
                 } catch (e) { console.error(e); }
             };
@@ -194,14 +232,15 @@
                             checkSafetyStatus(p.coords.latitude, p.coords.longitude);
                         }, () => console.warn("Location denied"));
                     }
-                } catch (e) { console.error(e); statusLabel.textContent = ' Data offline'; }
+                } catch (e) { console.error(e); if(statusLabel) statusLabel.textContent = ' Data offline'; }
             };
 
             const autoSync = async () => {
                 try {
                     await fetch('/api/sync');
+                    if(statusLabel) statusLabel.textContent = '✅ System Live';
                     loadData();
-                } catch (e) { statusLabel.textContent = ' Sync suspended'; }
+                } catch (e) { if(statusLabel) statusLabel.textContent = ' Sync suspended'; }
                 finally { setTimeout(autoSync, 300000); }
             };
 
@@ -213,7 +252,7 @@
                 }
                 let html = '<table><thead><tr><th>' + (isEarthquake ? 'Region' : 'Event') + '</th><th>Time</th></tr></thead><tbody>';
                 items.slice(0, 5).forEach(item => {
-                    html += `<tr><td>${(isEarthquake ? item.region : item.title)}</td><td>${new Date(item.event_time).toLocaleTimeString()}</td></tr>`;
+                    html += `<tr><td>${(isEarthquake ? item.region : item.title).substring(0,25)}...</td><td>${new Date(item.event_time).toLocaleTimeString()}</td></tr>`;
                 });
                 container.innerHTML = html + '</tbody></table>';
             };
