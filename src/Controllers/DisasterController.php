@@ -135,7 +135,7 @@ class DisasterController {
             return;
         }
 
-        $dangerRadius = 10000; // km
+        $dangerRadius = 100; // km
         $inDanger = false;
         $detectedDisaster = null;
         $currentTime = time();

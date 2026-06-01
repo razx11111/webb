@@ -139,11 +139,11 @@
             <a href="/report" class="btn btn-nav">Reports</a>
             
             <?php if(isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                <a href="/admin/shelters" class="btn btn-nav" style="border-color: #28a745; color: #28a745;">Manage Shelters</a>
+                <a href="/admin/shelters" class="btn btn-nav" style="background-color: #28a745; color: white;">Manage Shelters</a>
             <?php endif; ?>
 
             <?php if(isset($_SESSION['user_id'])): ?>
-                <a href="/logout" class="btn btn-nav" style="border-color: #dc3545; color: #dc3545;">Logout (<?= htmlspecialchars($_SESSION['name'] ?? 'User') ?>)</a>
+                <a href="/logout" class="btn btn-logout">Logout (<?= htmlspecialchars($_SESSION['name'] ?? 'User') ?>)</a>
             <?php else: ?>
                 <a href="/login" class="btn btn-nav">Login</a>
             <?php endif; ?>
