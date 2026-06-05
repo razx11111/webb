@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 </head>
 <body>
-    <div class="container">
+    <main class="container">
         <header>
             <h1><?= $pageTitle ?></h1>
             <nav>
@@ -17,7 +17,7 @@
             </nav>
         </header>
 
-        <main>
+        <div>
             <article class="card">
                 <header>
                     <h2>Active Flood Alerts</h2>
@@ -36,8 +36,8 @@
                     <p>Fetching data from authorities...</p>
                 </section>
             </article>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -54,11 +54,11 @@
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
 
-            let markersLayer = L.layerGroup().addTo(map);
+            var markersLayer = L.layerGroup().addTo(map);
 
             const fetchFloods = async (country = '') => {
                 try {
-                    let url = '/api/floods';
+                    var url = '/api/floods';
                     if (country) url += '?country=' + encodeURIComponent(country);
                     const response = await fetch(url);
                     if (!response.ok) throw new Error('API failure');
@@ -112,19 +112,37 @@
                     return;
                 }
 
-                let html = '<table><thead><tr><th>Report Time</th><th>Title / Description</th><th>Coordinates</th></tr></thead><tbody>';
+                const table = document.createElement('table');
+                table.innerHTML = '<thead><tr><th>Report Time</th><th>Title / Description</th><th>Coordinates</th></tr></thead>';
+                const tbody = document.createElement('tbody');
+
                 floods.forEach(f => {
-                    const date = new Date(f.event_time).toLocaleString();
-                    html += `<tr><td>${date}</td><td>${f.title}</td><td>Lat: ${f.latitude}, Lng: ${f.longitude}</td></tr>`;
+                    const row = document.createElement('tr');
+                    
+                    const cell1 = document.createElement('td');
+                    cell1.textContent = new Date(f.event_time).toLocaleString();
+                    row.appendChild(cell1);
+
+                    const cell2 = document.createElement('td');
+                    cell2.textContent = f.title;
+                    row.appendChild(cell2);
+
+                    const cell3 = document.createElement('td');
+                    cell3.textContent = `Lat: ${f.latitude}, Lng: ${f.longitude}`;
+                    row.appendChild(cell3);
+                    
+                    tbody.appendChild(row);
                 });
-                html += '</tbody></table>';
-                tableContainer.innerHTML = html;
+                
+                table.appendChild(tbody);
+                tableContainer.innerHTML = '';
+                tableContainer.appendChild(table);
             };
 
             searchBtn.addEventListener('click', () => fetchFloods(searchInput.value));
             searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') fetchFloods(searchInput.value); });
             csvBtn.addEventListener('click', () => {
-                let url = '/api/csv?type=flood';
+                var url = '/api/csv?type=flood';
                 if (searchInput.value) url += '&country=' + encodeURIComponent(searchInput.value);
                 window.location.href = url;
             });

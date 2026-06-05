@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= APP_NAME ?> - Earthquakes</title>
+    <title><?= htmlspecialchars(APP_NAME) ?> - <?= htmlspecialchars($pageTitle) ?></title>
     <link rel="stylesheet" href="/css/style.css">
     <!-- Leaflet CSS for OpenStreetMap -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 </head>
 <body>
-    <div class="container">
+    <main class="container">
         <header>
-            <h1><?= $pageTitle ?></h1>
+            <h1><?= htmlspecialchars($pageTitle) ?></h1>
             <nav>
                 <a href="/" class="btn">Dashboard</a>
             </nav>
         </header>
 
-        <main>
+        <div class="card-container">
             <article class="card">
                 <header>
                     <h2>Recent Seismic Activity</h2>
@@ -36,8 +36,8 @@
                     <p>Loading earthquake data...</p>
                 </section>
             </article>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -54,11 +54,19 @@
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
 
-            let markersLayer = L.layerGroup().addTo(map);
+            var markersLayer = L.layerGroup().addTo(map);
+
+            // Simple function to escape HTML characters from a string.
+            const escapeHTML = (str) => {
+                if (str === null || str === undefined) return '';
+                const p = document.createElement('p');
+                p.textContent = str;
+                return p.innerHTML;
+            };
 
             const fetchEarthquakes = async (country = '') => {
                 try {
-                    let url = '/api/earthquakes';
+                    var url = '/api/earthquakes';
                     if (country) url += '?country=' + encodeURIComponent(country);
                     const response = await fetch(url);
                     if (!response.ok) throw new Error('API failure');
@@ -81,14 +89,22 @@
                         const lat = parseFloat(eq.latitude);
                         const lng = parseFloat(eq.longitude);
                         const marker = L.marker([lat, lng]);
+
+                        // Sanitize all data before putting it into the HTML string for the popup.
+                        const safeRegion = escapeHTML(eq.region);
+                        const safeMag = escapeHTML(eq.magnitude);
+                        const safeMagType = escapeHTML(eq.magnitude_type);
+                        const safeDepth = escapeHTML(eq.depth);
+                        const safeTime = escapeHTML(new Date(eq.event_time).toLocaleString());
+
                         marker.bindPopup(`
-                            <strong>Earthquake in ${eq.region}</strong><br>
-                            Magnitude: ${eq.magnitude} ${eq.magnitude_type}<br>
-                            Depth: ${eq.depth} km<br>
-                            Time: ${new Date(eq.event_time).toLocaleString()}
+                            <strong>Earthquake in ${safeRegion}</strong><br>
+                            Magnitude: ${safeMag} ${safeMagType}<br>
+                            Depth: ${safeDepth} km<br>
+                            Time: ${safeTime}
                         `);
                         markersLayer.addLayer(marker);
-                        bounds.push([lat, lng]);
+bounds.push([lat, lng]);
                     }
                 });
 
@@ -103,35 +119,56 @@
                     return;
                 }
 
-                let html = `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Region</th>
-                                <th>Magnitude</th>
-                                <th>Depth (km)</th>
-                                <th>Authority</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
+                const table = document.createElement('table');
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+                
+                // Define headers
+                const headers = ['Date & Time', 'Region', 'Magnitude', 'Depth (km)', 'Authority'];
+                const headerRow = document.createElement('tr');
+                headers.forEach(headerText => {
+                    const th = document.createElement('th');
+                    th.textContent = headerText;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
 
+                // Create and append rows. Using .textContent is crucial for security.
                 earthquakes.forEach(eq => {
+                    const row = document.createElement('tr');
+                    
                     const eventDate = new Date(eq.event_time).toLocaleString();
-                    html += `
-                        <tr>
-                            <td>${eventDate}</td>
-                            <td>${eq.region}</td>
-                            <td><strong>${eq.magnitude}</strong> ${eq.magnitude_type}</td>
-                            <td>${eq.depth}</td>
-                            <td>${eq.authority}</td>
-                        </tr>
-                    `;
+                    const rowData = [
+                        eventDate,
+                        eq.region,
+                        `${eq.magnitude} ${eq.magnitude_type}`,
+                        eq.depth,
+                        eq.authority
+                    ];
+
+                    rowData.forEach(cellData => {
+                        const cell = document.createElement('td');
+                        cell.textContent = cellData;
+                        // Add strong tag for magnitude for styling
+                        if (cellData.includes(eq.magnitude)) {
+                            const strong = document.createElement('strong');
+                            strong.textContent = eq.magnitude;
+                            cell.innerHTML = ''; // Clear text content
+                            cell.appendChild(strong);
+                            cell.append(` ${eq.magnitude_type}`);
+                        }
+                        row.appendChild(cell);
+                    });
+
+                    tbody.appendChild(row);
                 });
 
-                html += '</tbody></table>';
-                tableContainer.innerHTML = html;
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                
+                // Replace container content safely
+                tableContainer.innerHTML = '';
+                tableContainer.appendChild(table);
             };
 
             searchBtn.addEventListener('click', () => fetchEarthquakes(searchInput.value));

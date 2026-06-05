@@ -11,10 +11,13 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+    <!-- Leaflet Routing Machine -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
     <style>
         /* FAIL-SAFE MODAL STYLES */
         #alert-overlay {
-            display: none; 
             position: fixed !important;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
@@ -103,35 +106,35 @@
 </head>
 <body>
 
-    <div id="alert-overlay">
+    <dialog id="alert-overlay">
         <section id="emergency-popup">
             <header class="popup-header">
                 <h2>🚨 Emergency Alert 🚨</h2>
             </header>
-            <div class="popup-body">
+            <main class="popup-body">
                 <p><strong>A danger has been detected near you!</strong></p>
                 <p>Type: <span id="alert-type" style="color: #e53e3e; font-weight: bold;"></span></p>
                 <p>Event: <span id="alert-name" style="font-style: italic;"></span></p>
-                <div class="shelter-info">
+                <aside class="shelter-info">
                     <h3 style="margin-top: 0;">Nearest Safe Shelter</h3>
                     <p id="nearest-shelter-name" style="font-weight: bold; font-size: 1.2rem; color: #2c3e50; margin: 5px 0;"></p>
                     <p id="shelter-distance" style="color: #4a5568; margin: 0;"></p>
-                    <div id="popup-map"></div>
-                </div>
+                    <figure id="popup-map"></figure>
+                </aside>
                 <p>Please evacuate immediately.</p>
-            </div>
+            </main>
             <footer class="popup-footer">
                 <button onclick="dismissAlert()" class="btn btn-evacuate">Acknowledge & Dismiss</button>
             </footer>
         </section>
-    </div>
+    </dialog>
 
     <header class="dashboard-header">
         <h1><?= APP_NAME ?></h1>
         <p id="sync-indicator" class="sync-status">Checking for updates...</p>
     </header>
 
-    <div class="container">
+    <section class="container">
         <nav class="navigation-menu">
             <a href="/floods" class="btn btn-nav">Floods</a>
             <a href="/earthquakes" class="btn btn-nav">Earthquakes</a>
@@ -149,26 +152,26 @@
             <?php endif; ?>
         </nav>
 
-        <main class="dashboard-grid">
+        <section class="dashboard-grid">
             <article class="card">
                 <header><h2 style="color: white;">Latest Floods</h2></header>
-                <div id="floods-container" class="table-responsive">Loading...</div>
+                <section id="floods-container" class="table-responsive">Loading...</section>
             </article>
             <article class="card">
                 <header><h2 style="color: white;">Latest Fires</h2></header>
-                <div id="fires-container" class="table-responsive">Loading...</div>
+                <section id="fires-container" class="table-responsive">Loading...</section>
             </article>
 
             <article class="card">
                 <header><h2 style="color: white;">Latest Earthquakes</h2></header>
-                <div id="earthquakes-container" class="table-responsive">Loading...</div>
+                <section id="earthquakes-container" class="table-responsive">Loading...</section>
             </article>
-        </main>
-    </div>
+        </section>
+    </section>
 
     <script>
         function dismissAlert() {
-            document.getElementById('alert-overlay').style.setProperty('display', 'none', 'important');
+            document.getElementById('alert-overlay').close();
             document.body.classList.remove('no-scroll');
         }
 
@@ -180,8 +183,9 @@
             const shelterNameDisplay = document.getElementById('nearest-shelter-name');
             const shelterDistDisplay = document.getElementById('shelter-distance');
 
-            let popupMap = null;
-            let shelterMarker = null;
+            var popupMap = null;
+            var shelterMarker = null;
+            var routingControl = null;
 
             const checkSafetyStatus = async (lat, lng) => {
                 try {
@@ -196,7 +200,7 @@
                             shelterDistDisplay.textContent = `${result.shelter.distance} km away`;
                         }
 
-                        overlay.style.setProperty('display', 'flex', 'important');
+                        overlay.showModal();
                         document.body.classList.add('no-scroll');
 
                         // Map Initialization
@@ -213,6 +217,17 @@
                                 shelterMarker = L.marker([result.shelter.lat, result.shelter.lng]).addTo(popupMap)
                                     .bindPopup(`<b>${result.shelter.name}</b>`).openPopup();
                                 
+                                if (routingControl) {
+                                    popupMap.removeControl(routingControl);
+                                }
+                                routingControl = L.routing.control({
+                                    waypoints: [
+                                        L.latLng(lat, lng),
+                                        L.latLng(result.shelter.lat, result.shelter.lng)
+                                    ],
+                                    show: false
+                                }).addTo(popupMap);
+
                                 popupMap.invalidateSize();
                             }, 400);
                         }
@@ -250,11 +265,44 @@
                     container.innerHTML = `<p>No recent activity.</p>`;
                     return;
                 }
-                let html = '<table><thead><tr><th>' + (isEarthquake ? 'Region' : 'Event') + '</th><th>Time</th></tr></thead><tbody>';
+
+                // Create table elements programmatically to prevent XSS.
+                const table = document.createElement('table');
+                const thead = document.createElement('thead');
+                const tbody = document.createElement('tbody');
+
+                
+                const headerRow = document.createElement('tr');
+                const th1 = document.createElement('th');
+                th1.textContent = isEarthquake ? 'Region' : 'Event';
+                const th2 = document.createElement('th');
+                th2.textContent = 'Time';
+                headerRow.appendChild(th1);
+                headerRow.appendChild(th2);
+                thead.appendChild(headerRow);
+
                 items.slice(0, 5).forEach(item => {
-                    html += `<tr><td>${(isEarthquake ? item.region : item.title).substring(0,25)}...</td><td>${new Date(item.event_time).toLocaleTimeString()}</td></tr>`;
+                    const row = document.createElement('tr');
+                    const cell1 = document.createElement('td');
+                    const cell2 = document.createElement('td');
+
+                    // Use .textContent to safely insert data.
+                    var title = isEarthquake ? item.region : item.title;
+                    // Safely truncate the text
+                    cell1.textContent = title.length > 25 ? title.substring(0, 25) + '...' : title;
+                    cell2.textContent = new Date(item.event_time).toLocaleTimeString();
+                    
+                    row.appendChild(cell1);
+                    row.appendChild(cell2);
+                    tbody.appendChild(row);
                 });
-                container.innerHTML = html + '</tbody></table>';
+
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                
+                // Clear the container and append the new, safe table.
+                container.innerHTML = '';
+                container.appendChild(table);
             };
 
             loadData();

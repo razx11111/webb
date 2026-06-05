@@ -24,10 +24,7 @@ class ShelterController {
      */
     public function adminIndex() {
         // Protect this route: only admins can manage shelters
-        if (($_SESSION['role'] ?? '') !== 'admin') {
-            header("Location: /login");
-            exit();
-        }
+        $this->requireAdmin();
 
         $pageTitle = "Manage Emergency Shelters";
         require_once __DIR__ . '/../../templates/pages/shelters_admin.php';
@@ -46,29 +43,61 @@ class ShelterController {
      * Action: Add a new shelter (POST).
      */
     public function addShelter() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || ($_SESSION['role'] ?? '') !== 'admin') {
-            http_response_code(403);
-            die("Unauthorized");
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            return $this->sendJsonError(405, 'Method Not Allowed');
         }
+        
+        $this->requireAdmin();
 
         $name = trim($_POST['name'] ?? '');
-        $lat  = $_POST['latitude'] ?? '';
-        $lng  = $_POST['longitude'] ?? '';
-        $cap  = $_POST['capacity'] ?? null;
+        $lat = filter_input(INPUT_POST, 'latitude', FILTER_VALIDATE_FLOAT);
+        $lng = filter_input(INPUT_POST, 'longitude', FILTER_VALIDATE_FLOAT);
+        $cap = filter_input(INPUT_POST, 'capacity', FILTER_VALIDATE_INT);
 
-        if (empty($name) || empty($lat) || empty($lng)) {
-            die("Please provide name and location (click on the map).");
+        if (empty($name) || $lat === false || $lng === false) {
+            return $this->sendJsonError(400, 'Invalid data. Please provide a name and a valid map location.');
+        }
+        
+        if ($cap !== null && $cap < 0) {
+            return $this->sendJsonError(400, 'Capacity cannot be negative.');
         }
 
         $model = new Shelter();
-        $model->create([
+        $success = $model->create([
             'name'      => $name,
             'latitude'  => $lat,
             'longitude' => $lng,
-            'capacity'  => $cap
+            'capacity'  => $cap,
         ]);
 
-        header("Location: /admin/shelters?success=1");
-        exit();
+        if ($success) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'message' => 'Shelter added successfully.']);
+        } else {
+            $this->sendJsonError(500, 'Failed to save shelter to the database.');
+        }
+    }
+
+    /**
+     * Ensures that the current user is an administrator.
+     * If not, it sends a 403 Forbidden response and terminates the script.
+     */
+    private function requireAdmin() {
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            $this->sendJsonError(403, 'Forbidden: Administrator access required.');
+            exit();
+        }
+    }
+
+    /**
+     * Sends a JSON error response with an appropriate status code.
+     *
+     * @param int $statusCode The HTTP status code.
+     * @param string $message The error message.
+     */
+    private function sendJsonError(int $statusCode, string $message) {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => $message]);
     }
 }

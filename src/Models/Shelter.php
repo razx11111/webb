@@ -4,25 +4,13 @@ namespace App\Models;
 
 /**
  * Shelter Model
- * 
- * Handles storage and retrieval of safe shelter locations.
+ *
+ * Represents the 'shelters' table in the database.
+ * This class is very simple because it inherits all the necessary database
+ * functionality (getAll, getById, create) from the BaseModel. We just need
+ * to tell it which table to use and how to sort by default.
  */
 class Shelter extends BaseModel {
     protected $table = 'shelters';
-    protected $orderBy = 'created_at';
-
-    /**
-     * Persists a new shelter location.
-     */
-    public function create($data) {
-        $sql = "INSERT INTO shelters (name, latitude, longitude, capacity) 
-                VALUES (:name, :lat, :lng, :cap)";
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
-            ':name' => $data['name'],
-            ':lat'  => $data['latitude'],
-            ':lng'  => $data['longitude'],
-            ':cap'  => $data['capacity'] ?? null
-        ]);
-    }
+    protected $orderBy = 'name'; // It makes more sense to order shelters by name
 }

@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= APP_NAME ?> - Fires</title>
+    <title><?= htmlspecialchars(APP_NAME) ?> - <?= htmlspecialchars($pageTitle) ?></title>
     <link rel="stylesheet" href="/css/style.css">
     <!-- Leaflet CSS for OpenStreetMap -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 </head>
 <body>
-    <div class="container">
+    <main class="container">
         <header>
-            <h1><?= $pageTitle ?></h1>
+            <h1><?= htmlspecialchars($pageTitle) ?></h1>
             <nav>
                 <a href="/" class="btn">Dashboard</a>
             </nav>
         </header>
 
-        <main>
+        <div>
             <article class="card">
                 <header>
                     <h2>Active Wildfire Detections</h2>
@@ -36,8 +36,8 @@
                     <p>Fetching latest fire data...</p>
                 </section>
             </article>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -54,11 +54,11 @@
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
 
-            let markersLayer = L.layerGroup().addTo(map);
+            var markersLayer = L.layerGroup().addTo(map);
 
             const fetchFires = async (country = '') => {
                 try {
-                    let url = '/api/fires';
+                    var url = '/api/fires';
                     if (country) url += '?country=' + encodeURIComponent(country);
                     const response = await fetch(url);
                     if (!response.ok) throw new Error('API failure');
@@ -110,19 +110,37 @@
                     return;
                 }
 
-                let html = '<table><thead><tr><th>Detection Time</th><th>Event Details</th><th>Location</th></tr></thead><tbody>';
+                const table = document.createElement('table');
+                table.innerHTML = '<thead><tr><th>Detection Time</th><th>Event Details</th><th>Location</th></tr></thead>';
+                const tbody = document.createElement('tbody');
+
                 fires.forEach(f => {
-                    const date = new Date(f.event_time).toLocaleString();
-                    html += `<tr><td>${date}</td><td>${f.title}</td><td>Lat: ${f.latitude}, Lng: ${f.longitude}</td></tr>`;
+                    const row = document.createElement('tr');
+                    
+                    const cell1 = document.createElement('td');
+                    cell1.textContent = new Date(f.event_time).toLocaleString();
+                    row.appendChild(cell1);
+
+                    const cell2 = document.createElement('td');
+                    cell2.textContent = f.title;
+                    row.appendChild(cell2);
+
+                    const cell3 = document.createElement('td');
+                    cell3.textContent = `Lat: ${f.latitude}, Lng: ${f.longitude}`;
+                    row.appendChild(cell3);
+                    
+                    tbody.appendChild(row);
                 });
-                html += '</tbody></table>';
-                tableContainer.innerHTML = html;
+                
+                table.appendChild(tbody);
+                tableContainer.innerHTML = '';
+                tableContainer.appendChild(table);
             };
 
             searchBtn.addEventListener('click', () => fetchFires(searchInput.value));
             searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') fetchFires(searchInput.value); });
             csvBtn.addEventListener('click', () => {
-                let url = '/api/csv?type=fire';
+                var url = '/api/csv?type=fire';
                 if (searchInput.value) url += '&country=' + encodeURIComponent(searchInput.value);
                 window.location.href = url;
             });

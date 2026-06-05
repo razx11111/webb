@@ -16,8 +16,13 @@ use App\Services\CAPService;
 class CAPController {
 
     /**
+     * @var int The interval in seconds for how often to sync data.
+     */
+    private const SYNC_INTERVAL = 300; // 5 minutes
+
+    /**
      * CAP RSS Feed Endpoint
-     * 
+     *
      * Generates a standard RSS 2.0 feed containing CAP 1.2 alerts.
      * Accessible via /api/cap?type=all&latest=15
      */
@@ -25,39 +30,9 @@ class CAPController {
         $type = $_GET['type'] ?? 'all';
         $limit = isset($_GET['latest']) ? (int)$_GET['latest'] : 15;
 
-        // Lazy Sync Logic: Ensure data is fresh
-        $syncFile = sys_get_temp_dir() . '/coa_last_sync.txt';
-        $currentTime = time();
-        $lastSync = file_exists($syncFile) ? (int)file_get_contents($syncFile) : 0;
+        $this->lazySyncData();
 
-        // If more than 10 minutes (600 seconds) have passed, trigger sync
-        if (($currentTime - $lastSync) > 600) {
-            try {
-                $syncService = new \App\Services\DataSync();
-                $syncService->syncExternalData();
-                file_put_contents($syncFile, $currentTime);
-            } catch (\Exception $e) {
-                // Log error but continue to serve whatever data we have
-                error_log("Lazy Sync failed: " . $e->getMessage());
-            }
-        }
-
-        $floodModel = new Flood();
-        $fireModel = new Fire();
-        $earthquakeModel = new Earthquake();
-
-        $disasters = [];
-
-        // Aggregate disasters based on type
-        if ($type === 'flood' || $type === 'all') {
-            foreach ($floodModel->getAll($limit) as $fl) { $disasters[] = ['type' => 'flood', 'data' => $fl]; }
-        }
-        if ($type === 'fire' || $type === 'all') {
-            foreach ($fireModel->getAll($limit) as $f) { $disasters[] = ['type' => 'fire', 'data' => $f]; }
-        }
-        if ($type === 'earthquake' || $type === 'all') {
-            foreach ($earthquakeModel->getAll($limit) as $e) { $disasters[] = ['type' => 'earthquake', 'data' => $e]; }
-        }
+        $disasters = $this->aggregateDisasters($type, $limit);
 
         // Sort by event time descending
         usort($disasters, function($a, $b) {
@@ -65,67 +40,169 @@ class CAPController {
         });
 
         // Limit the final collection
-        if (count($disasters) > $limit) $disasters = array_slice($disasters, 0, $limit);
+        if (count($disasters) > $limit) {
+            $disasters = array_slice($disasters, 0, $limit);
+        }
 
-        header('Content-Type: application/rss+xml; charset=utf-8');
-        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        echo '<rss version="2.0" xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">' . "\n";
-        echo '<channel>' . "\n";
-        echo '<title>CoA Disaster Alert Feed</title>' . "\n";
-        echo '<link>http://localhost:8080/</link>' . "\n";
-        echo '<description>Latest CAP 1.2 alerts from Crisis Containment Service</description>' . "\n";
-        
+        $this->renderRssFeed($disasters);
+    }
+
+    /**
+     * Renders the final RSS feed XML.
+     *
+     * @param array $disasters The list of disasters to include in the feed.
+     */
+    private function renderRssFeed(array $disasters) {
         $capService = new CAPService();
         $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
 
+        header('Content-Type: application/rss+xml; charset=utf-8');
+        $writer = new \XMLWriter();
+        $writer->openMemory();
+        $writer->startDocument('1.0', 'UTF-8');
+        $writer->setIndent(true);
+
+        $writer->startElement('rss');
+        $writer->writeAttribute('version', '2.0');
+        $writer->writeAttributeNS('xmlns', 'cap', null, 'urn:oasis:names:tc:emergency:cap:1.2');
+
+        $writer->startElement('channel');
+        $writer->writeElement('title', 'CoA Disaster Alert Feed');
+        $writer->writeElement('link', $baseUrl . '/');
+        $writer->writeElement('description', 'Latest CAP 1.2 alerts from Crisis Containment Service');
+
         foreach ($disasters as $item) {
             $data = $item['data'];
-            // Pointing directly to our internal CAP XML exporter
             $internalXmlLink = $baseUrl . "/api/cap/alert?type=" . $item['type'] . "&id=" . $data['id'];
 
-            echo '<item>' . "\n";
-            echo '<title>' . htmlspecialchars($data['title'] ?? $data['region']) . '</title>' . "\n";
-            echo '<pubDate>' . date('r', strtotime($data['event_time'])) . '</pubDate>' . "\n";
-            echo '<link>' . htmlspecialchars($internalXmlLink) . '</link>' . "\n";
-            echo '<guid isPermaLink="true">' . htmlspecialchars($internalXmlLink) . '</guid>' . "\n";
-            
-            // Generate the XML and strip headers for embedding
+            $writer->startElement('item');
+            $writer->writeElement('title', htmlspecialchars($data['title'] ?? $data['region']));
+            $writer->writeElement('pubDate', date('r', strtotime($data['event_time'])));
+            $writer->writeElement('link', htmlspecialchars($internalXmlLink));
+            $writer->startElement('guid');
+            $writer->writeAttribute('isPermaLink', 'true');
+            $writer->text(htmlspecialchars($internalXmlLink));
+            $writer->endElement(); // guid
+
+            // Embed CAP XML directly
             $singleXml = $capService->generateXml($data, $item['type']);
-            echo preg_replace('/<\?xml[^>]+\?>\s*|<\?xml-stylesheet[^>]+\?>\s*/i', '', $singleXml) . "\n";
-            
-            echo '</item>' . "\n";
+            $cleanXml = preg_replace('/<\?xml[^>]+\?>\s*|<\?xml-stylesheet[^>]+\?>\s*/i', '', $singleXml);
+            $writer->writeRaw($cleanXml);
+
+            $writer->endElement(); // item
         }
-        echo '</channel></rss>';
+
+        $writer->endElement(); // channel
+        $writer->endElement(); // rss
+        $writer->endDocument();
+
+        echo $writer->outputMemory();
     }
+
+    /**
+     * Triggers data synchronization if the last sync was too long ago.
+     */
+    private function lazySyncData() {
+        $syncFile = sys_get_temp_dir() . '/coa_last_sync.txt';
+        $currentTime = time();
+        $lastSync = file_exists($syncFile) ? (int)file_get_contents($syncFile) : 0;
+
+        if (($currentTime - $lastSync) > self::SYNC_INTERVAL) {
+            try {
+                $syncService = new \App\Services\DataSync();
+                $syncService->syncExternalData();
+                file_put_contents($syncFile, $currentTime);
+            } catch (\Exception $e) {
+                // Log error but continue, serving potentially stale data.
+                error_log("Lazy Sync failed: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Aggregates disaster data from various models.
+     *
+     * @param string $type The type of disaster to fetch ('all', 'flood', 'fire', 'earthquake').
+     * @param int $limit The maximum number of records to fetch from each source.
+     * @return array The aggregated list of disasters.
+     */
+    private function aggregateDisasters(string $type, int $limit): array {
+        $disasters = [];
+        $models = [
+            'flood' => new Flood(),
+            'fire' => new Fire(),
+            'earthquake' => new Earthquake(),
+        ];
+
+        $typesToFetch = ($type === 'all') ? array_keys($models) : [$type];
+
+        foreach ($typesToFetch as $disasterType) {
+            if (isset($models[$disasterType])) {
+                foreach ($models[$disasterType]->getAll($limit) as $record) {
+                    $disasters[] = ['type' => $disasterType, 'data' => $record];
+                }
+            }
+        }
+
+        return $disasters;
+    }
+
 
     /**
      * Endpoint for a single CAP XML message
      * Returns a pure CAP 1.2 XML for a specific record.
      */
     public function exportSingleCap() {
-        // Handle potential XML entity encoding in keys (amp;id)
         $type = $_GET['type'] ?? '';
-        $id = $_GET['id'] ?? ($_GET['amp;id'] ?? '');
+        $id = $_GET['id'] ?? null;
 
-        if (!$type || !$id) {
-            http_response_code(400);
-            die("Missing type or id");
+        if (empty($type) || empty($id)) {
+            return $this->sendErrorResponse(400, 'Missing type or id parameters.');
         }
 
-        $model = match($type) {
+        $model = match ($type) {
             'flood' => new Flood(),
             'fire' => new Fire(),
             'earthquake' => new Earthquake(),
-            default => null
+            default => null,
         };
 
-        if (!$model || !($data = $model->getById($id))) {
-            http_response_code(404);
-            die("Alert not found");
+        if (!$model) {
+            return $this->sendErrorResponse(400, 'Invalid disaster type specified.');
         }
 
-        header('Content-Type: application/xml; charset=utf-8');
+        $data = $model->getById($id);
+        if (!$data) {
+            return $this->sendErrorResponse(404, 'The requested alert could not be found.');
+        }
+
         $capService = new CAPService();
-        echo $capService->generateXml($data, $type);
+        $xml = $capService->generateXml($data, $type);
+
+        $this->sendXmlResponse($xml);
+    }
+
+    /**
+     * Sends an XML response with appropriate headers.
+     *
+     * @param string $xml The XML content to output.
+     * @param int $statusCode The HTTP status code to send.
+     */
+    private function sendXmlResponse(string $xml, int $statusCode = 200) {
+        http_response_code($statusCode);
+        header('Content-Type: application/xml; charset=utf-8');
+        echo $xml;
+    }
+
+    /**
+     * Sends a plain text error response.
+     *
+     * @param int $statusCode The HTTP status code (e.g., 400, 404, 500).
+     * @param string $message The error message to display.
+     */
+    private function sendErrorResponse(int $statusCode, string $message) {
+        http_response_code($statusCode);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo $message;
     }
 }

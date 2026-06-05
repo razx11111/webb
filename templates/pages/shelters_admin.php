@@ -25,20 +25,20 @@
         <p>Current logged in as: <?= htmlspecialchars($_SESSION['name'] ?? 'Admin') ?></p>
     </header>
 
-    <div class="container">
+    <main class="container-fluid" style="padding: 20px;">
         <nav class="navigation-menu" style="margin-bottom: 20px;">
             <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
         </nav>
 
         <main>
-            <div class="admin-grid">
+            <section class="admin-grid">
                 <!-- Map View -->
                 <section class="map-container">
                     <header>
                         <h2>1. Shelter Map</h2>
                         <p>Blue markers are existing shelters. Click on the map to place a NEW shelter (Red marker).</p>
                     </header>
-                    <div id="map"></div>
+                    <figure id="map"></figure>
                 </section>
 
                 <!-- Add Form -->
@@ -48,46 +48,46 @@
                     </header>
                     
                     <?php if(isset($_GET['success'])): ?>
-                        <div class="alert-success">✅ Shelter added successfully!</div>
+                        <strong class="alert-success">✅ Shelter added successfully!</strong>
                     <?php endif; ?>
 
                     <form action="/admin/shelters/add" method="POST" class="shelter-form">
-                        <div class="form-group">
+                        <section class="form-group">
                             <label>Coordinates (Click map or type):</label>
-                            <div class="controls-bar" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                                <div>
+                            <fieldset class="controls-bar" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                <legend>Coordinates</legend>
+                                <p>
                                     <small>Latitude</small>
                                     <input type="text" name="latitude" id="input-lat" class="form-control" placeholder="0.000000" required>
-                                </div>
-                                <p></p>
-                                <div>
+                                </p>
+                                <p>
                                     <small>Longitude</small>
                                     <input type="text" name="longitude" id="input-lng" class="form-control" placeholder="0.000000" required>
-                                </div>
-                            </div>
-                        </div>
+                                </p>
+                            </fieldset>
+                        </section>
 
-                        <div class="form-group">
+                        <section class="form-group">
                             <label for="name">Shelter Name:</label>
                             <input type="text" name="name" id="name" class="form-control" placeholder="e.g. North Hall Shelter" required>
-                        </div>
+                        </section>
 
-                        <div class="form-group">
+                        <section class="form-group">
                             <label for="capacity">Estimated Capacity:</label>
                             <input type="number" name="capacity" id="capacity" class="form-control" placeholder="Max persons">
-                        </div>
+                        </section>
 
                         <button type="submit" class="btn btn-primary" style="width: 100%;">Save Shelter</button>
                     </form>
                 </section>
-            </div>
+            </section>
 
             <!-- Descriptive List -->
             <section class="shelter-list-section card">
                 <header>
                     <h2>Existing Shelters Registry</h2>
                 </header>
-                <div class="table-responsive">
+                <section class="table-responsive">
                     <table id="shelters-table">
                         <thead>
                             <tr>
@@ -101,10 +101,10 @@
                             <tr><td colspan="4">Loading shelters...</td></tr>
                         </tbody>
                     </table>
-                </div>
+                </section>
             </section>
         </main>
-    </div>
+    </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -131,9 +131,7 @@
             const lngInput = document.getElementById('input-lng');
             const tableBody = document.getElementById('shelters-list-body');
 
-            /**
-             * Updates the selection marker based on current input values
-             */
+            // Updates the marker based on input values
             const updateMarkerFromInputs = () => {
                 const lat = parseFloat(latInput.value);
                 const lng = parseFloat(lngInput.value);
@@ -173,12 +171,25 @@
 
                         // Add to Table
                         const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td><strong>${s.name}</strong></td>
-                            <td>${s.latitude}, ${s.longitude}</td>
-                            <td>${s.capacity || 'Unknown'}</td>
-                            <td>${new Date(s.created_at).toLocaleDateString()}</td>
-                        `;
+                        
+                        const nameCell = document.createElement('td');
+                        const strong = document.createElement('strong');
+                        strong.textContent = s.name;
+                        nameCell.appendChild(strong);
+                        row.appendChild(nameCell);
+
+                        const coordsCell = document.createElement('td');
+                        coordsCell.textContent = `${s.latitude}, ${s.longitude}`;
+                        row.appendChild(coordsCell);
+
+                        const capacityCell = document.createElement('td');
+                        capacityCell.textContent = s.capacity || 'Unknown';
+                        row.appendChild(capacityCell);
+
+                        const dateCell = document.createElement('td');
+                        dateCell.textContent = new Date(s.created_at).toLocaleDateString();
+                        row.appendChild(dateCell);
+                        
                         tableBody.appendChild(row);
                     });
 

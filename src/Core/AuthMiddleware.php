@@ -2,31 +2,38 @@
 
 namespace App\Core;
 
+/**
+ * Handles basic authentication checks for routes.
+ */
 class AuthMiddleware {
+
     /**
-     * Protejează rutele: Verifică dacă utilizatorul (User sau Admin) este logat.
-     * Dacă nu este, îl trimite la pagina de login sau îi dă eroare pe API.
+     * Protects a route by checking if a user (User or Admin) is logged in.
+     * If not, it redirects to the login page or returns a JSON error for API requests.
      */
     public static function requireLogin() {
-        // 1. Ne asigurăm că sesiunea este pornită
+        // First, ensure the session is active.
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
-        // 2. Verificăm dacă există o sesiune activă (dacă s-a logat cineva)
+        // Check if a user ID exists in the session.
         if (!isset($_SESSION['user_id'])) {
             
-            // 3. Dacă e o cerere către API (AJAX din JS), nu putem face redirect.
-            // Trebuie să dăm un răspuns JSON cu cod 401 (Unauthorized)
-            if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
-                header('Content-Type: application/json');
-                http_response_code(401);
-                echo json_encode(['error' => 'Neautorizat. Te rugăm să te loghezi.']);
-                exit();
-            }
+            // Check if this is an API request
+            $isApiRequest = strpos($_SERVER['REQUEST_URI'], '/api/') === 0;
 
-            // 4. Dacă e o cerere normală de pagină HTML, îl aruncăm afară (redirect)
-            header("Location: /login");
+            if ($isApiRequest) {
+                // For API requests, we can't redirect. Send a JSON error with a 401 Unauthorized status.
+                header('Content-Type: application/json');
+                http_response_code(401); // 401 Unauthorized: The client must authenticate themselves to get the requested response.
+                echo json_encode(['error' => 'Unauthorized. Please log in.']);
+            } else {
+                // For normal page requests, redirect the user to the login page.
+                header("Location: /login");
+            }
+            
+            // Stop script execution after sending the response.
             exit();
         }
     }

@@ -1,29 +1,31 @@
 <?php
 namespace App\Services;
 
-use App\Core\Database; // Singleton database connection from webb_2.zip
+use App\Core\Database;
 use DOMDocument;
 use DOMXPath;
 use RuntimeException;
 
 /**
  * DataSync Service
- * Handles fetching, parsing, and storing disaster data from GDACS RSS feeds.
+ * Handles fetching, parsing, and storing disaster data from external sources.
+ * It connects to GDACS for floods/fires and SeismicPortal for earthquakes.
  */
 class DataSync {
     private $db;
-    // The official GDACS RSS feed URL
+
+    // The official GDACS RSS feed for major disasters.
     private const GDACS_URL = "https://www.gdacs.org/xml/rss.xml";
-    // SeismicPortal API for real-time earthquake data (last 50 events)
+    // The SeismicPortal API provides real-time earthquake data in GeoJSON format.
     private const SEISMIC_URL = "https://www.seismicportal.eu/fdsnws/event/1/query?limit=50&format=json";
 
     public function __construct() {
-        // Obtain the PDO connection from the Core Database class
         $this->db = Database::getInstance()->getConnection();
     }
 
     /**
-     * Synchronizes external disaster data with the local PostgreSQL database.
+     * This is the main public method that triggers the synchronization for all sources.
+     * Aceasta este metoda publică principală care declanșează sincronizarea din toate sursele.
      */
     public function syncExternalData() {
         $this->syncGdacsData();
@@ -31,41 +33,45 @@ class DataSync {
     }
 
     /**
-     * Fetches and parses RSS data from GDACS (Floods and Fires)
+     * Fetches and parses RSS data from GDACS (Floods and Fires).
+     * This method uses DOMDocument and DOMXPath to correctly parse namespaced XML.
      */
     private function syncGdacsData() {
+        // This method gets the data from the GDACS RSS feed.
         try {
+            // I'm using DOMDocument to parse the XML from the RSS feed.
             $dom = new DOMDocument();
-            
-            // Load the remote XML content safely
-            if (!@$dom->load(self::GDACS_URL)) {
-                throw new RuntimeException("Could not connect to GDACS RSS feed.");
+            if (!$dom->load(self::GDACS_URL)) {
+                throw new RuntimeException("Could not connect to GDACS RSS feed. The service might be down.");
             }
 
+            // I'm using DOMXPath to query the XML. It's like SQL for XML.
             $xpath = new DOMXPath($dom);
-            
-            // Register namespaces found in the GDACS XML header to allow XPath queries
+
+            // The GDACS feed uses some custom namespaces, so I have to register them here.
             $xpath->registerNamespace('geo', 'http://www.w3.org/2003/01/geo/wgs84_pos#');
             $xpath->registerNamespace('gdacs', 'http://www.gdacs.org');
 
-            // Find all <item> tags in the RSS feed
+            // I'm looking for all the <item> tags in the RSS feed.
             $items = $xpath->query("//item");
 
+            // Now I loop through all the items.
             foreach ($items as $news) {
-                // Use a helper method to safely extract node values and avoid "null" errors
-                $title = $this->getNodeValue($xpath, "title", $news);
-                $guid  = $this->getNodeValue($xpath, "guid", $news);
-                $type  = $this->getNodeValue($xpath, "gdacs:eventtype", $news);
-                $lat   = $this->getNodeValue($xpath, "geo:Point/geo:lat", $news);
-                $long  = $this->getNodeValue($xpath, "geo:Point/geo:long", $news);
-                $date  = $this->getNodeValue($xpath, "pubDate", $news);
+                // I need to get the title, guid, type, lat, long, and date from each item.
+                // I'm using the query method from DOMXPath to get the values.
+                $title = $xpath->query("title", $news)->item(0)->nodeValue;
+                $guid  = $xpath->query("guid", $news)->item(0)->nodeValue;
+                $type  = $xpath->query("gdacs:eventtype", $news)->item(0)->nodeValue;
+                $lat   = $xpath->query("geo:Point/geo:lat", $news)->item(0)->nodeValue;
+                $long  = $xpath->query("geo:Point/geo:long", $news)->item(0)->nodeValue;
+                $date  = $xpath->query("pubDate", $news)->item(0)->nodeValue;
 
-                // Validation: Only proceed if we have the mandatory ID and coordinates
+                // I only want to save the data if it has a guid, lat, and long.
                 if ($guid && $lat !== null && $long !== null) {
-                    // Convert RSS date to PostgreSQL compatible format
+                    // I need to convert the date to a format that the database can understand.
                     $dbDate = date('Y-m-d H:i:s', strtotime($date));
 
-                    // Route data based on disaster type codes (FL = Flood, WF = Wildfire)
+                    // I'm checking the type of the disaster and saving it to the correct table.
                     if ($type === 'FL') {
                         $this->saveGdacsToDatabase('floods', $guid, $title, $lat, $long, $dbDate);
                     } elseif ($type === 'WF') {
@@ -74,72 +80,79 @@ class DataSync {
                 }
             }
         } catch (RuntimeException $e) {
+            // If something goes wrong, I'm logging the error.
             error_log("GDACS Sync Error: " . $e->getMessage());
         }
     }
 
     /**
-     * Fetches and parses JSON data from SeismicPortal (Earthquakes)
+     * Fetches and parses JSON data from SeismicPortal (Earthquakes).
      */
     private function syncEarthquakeData() {
+        // This method gets the data from the SeismicPortal API.
         try {
-            // Fetch JSON content from SeismicPortal
-            $jsonContent = @file_get_contents(self::SEISMIC_URL);
-            if (!$jsonContent) {
-                throw new RuntimeException("Could not connect to SeismicPortal.");
+            // using file_get_contents to get the JSON data from the API.
+            $jsonContent = file_get_contents(self::SEISMIC_URL);
+            if ($jsonContent === false) {
+                throw new RuntimeException("Could not connect to SeismicPortal API.");
             }
 
+            // using json_decode to parse the JSON data.
             $data = json_decode($jsonContent, true);
             if (!isset($data['features'])) return;
 
+            // loop through all the features in the JSON data.
             foreach ($data['features'] as $feature) {
                 $props = $feature['properties'];
                 $geom  = $feature['geometry']['coordinates'];
+                $id = $props['unid'] ?? $props['source_id'];
 
-                $sql = "INSERT INTO earthquakes (
-                            external_id, magnitude, magnitude_type, latitude, 
-                            longitude, depth, region, event_time, source_catalog, authority
-                        ) VALUES (:id, :mag, :mag_type, :lat, :lng, :depth, :region, :time, :catalog, :auth)
-                        ON CONFLICT (external_id) DO NOTHING";
-                
-                $stmt = $this->db->prepare($sql);
-                $stmt->execute([
-                    ':id'       => $props['unid'] ?? $props['source_id'],
-                    ':mag'      => $props['mag'],
-                    ':mag_type' => $props['magtype'],
-                    ':lat'      => $geom[1], // Latitude is second in GeoJSON coordinates [lng, lat, depth]
-                    ':lng'      => $geom[0],
-                    ':depth'    => $geom[2] ?? null,
-                    ':region'   => $props['flynn_region'],
-                    ':time'     => date('Y-m-d H:i:s', strtotime($props['time'])),
-                    ':catalog'  => $props['catalog'] ?? null,
-                    ':auth'     => $props['auth'] ?? null
-                ]);
+                // check if the earthquake is already in the database.
+                $stmt = $this->db->prepare("SELECT * FROM earthquakes WHERE external_id = :id");
+                $stmt->execute([':id' => $id]);
+                $exists = $stmt->fetch();
+
+                // If the earthquake is not in the database, I insert it.
+                if (!$exists) {
+                    $sql = "INSERT INTO earthquakes (
+                                external_id, magnitude, magnitude_type, latitude, 
+                                longitude, depth, region, event_time, source_catalog, authority
+                            ) VALUES (:id, :mag, :mag_type, :lat, :lng, :depth, :region, :time, :catalog, :auth)";
+
+                    $stmt = $this->db->prepare($sql);
+                    // Note: GeoJSON coordinate order is [longitude, latitude, depth].
+                    $stmt->execute([
+                        ':id'       => $id,
+                        ':mag'      => $props['mag'],
+                        ':mag_type' => $props['magtype'],
+                        ':lat'      => $geom[1],
+                        ':lng'      => $geom[0],
+                        ':depth'    => $geom[2] ?? null,
+                        ':region'   => $props['flynn_region'],
+                        ':time'     => date('Y-m-d H:i:s', strtotime($props['time'])),
+                        ':catalog'  => $props['catalog'] ?? null,
+                        ':auth'     => $props['auth'] ?? null
+                    ]);
+                }
             }
         } catch (\Exception $e) {
+            // If something goes wrong, I'm logging the error.
             error_log("Earthquake Sync Error: " . $e->getMessage());
         }
     }
 
     /**
-     * Helper method to safely extract a node's value.
-     */
-    private function getNodeValue($xpath, $query, $context) {
-        $nodeList = $xpath->query($query, $context);
-        if ($nodeList && $nodeList->length > 0) {
-            return $nodeList->item(0)->nodeValue;
-        }
-        return null;
-    }
-
-    /**
-     * Persists a GDACS record (Flood/Fire) using PDO Prepared Statements.
+     * Persists a GDACS record (Flood/Fire) using a prepared statement.
+     * Uses `ON CONFLICT DO NOTHING` to efficiently ignore duplicate records
+     * without needing to run a SELECT check first.
      */
     private function saveGdacsToDatabase($table, $id, $title, $lat, $lng, $time) {
+        // We use string interpolation for the table name because PDO cannot bind it.
+        // This is safe here because the table name comes from our own code, not user input.
         $sql = "INSERT INTO $table (external_id, title, latitude, longitude, event_time) 
                 VALUES (:id, :title, :lat, :lng, :time) 
                 ON CONFLICT (external_id) DO NOTHING";
-        
+
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->execute([

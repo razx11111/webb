@@ -7,21 +7,29 @@
     <link rel="stylesheet" href="/css/style.css?v=<?= time() ?>">
 </head>
 <body>
-    <div class="auth-container">
+    <main class="auth-container">
         <h2>User Registration</h2>
+
+        <?php 
+        // Show error messages from URL
+        if(isset($_GET['error'])): 
+        ?>
+            <p class="error-msg"><?= htmlspecialchars($_GET['error']) ?></p>
+        <?php endif; ?>
+        
         <form action="/register" method="POST">
-            <div class="form-group">
+            <section class="form-group">
                 <label>Username:</label>
                 <input type="text" name="username" required>
-            </div>
-            <div class="form-group">
+            </section>
+            <section class="form-group">
                 <label>Email:</label>
                 <input type="email" name="email" required>
-            </div>
-            <div class="form-group">
+            </section>
+            <section class="form-group">
                 <label>Password:</label>
                 <input type="password" name="password" required>
-            </div>
+            </section>
 
             <button type="submit" class="btn btn-primary">Create Account</button>
         </form>

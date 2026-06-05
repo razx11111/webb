@@ -7,29 +7,27 @@
     <link rel="stylesheet" href="/css/style.css?v=<?= time() ?>">
 </head>
 <body>
-    <div class="container">
+    <main class="container">
         <header>
             <h1><?= $pageTitle ?? 'Report' ?></h1>
             <a href="/" class="btn">Back to Dashboard</a>
         </header>
 
-        <main>
-            <div class="card" style="margin-bottom: 20px;">
-                <h2>Scholarly Documentation</h2>
-                <p>Access the complete Scholarly HTML technical documentation detailing the architecture, APIs, and design decisions of the Crisis Containment Service.</p>
-                <div style="margin-top: 15px;">
-                    <a href="/report.html" target="_blank" class="btn" style="background-color: #8e44ad;">View Scholarly HTML</a>
-                </div>
+        <section class="card" style="margin-bottom: 20px;">
+            <h2>Scholarly Documentation</h2>
+            <p>Access the complete Scholarly HTML technical documentation detailing the architecture, APIs, and design decisions of the Crisis Containment Service.</p>
+            <div style="margin-top: 15px;">
+                <a href="/report.html" target="_blank" class="btn" style="background-color: #8e44ad;">View Scholarly HTML</a>
             </div>
+        </section>
 
-            <div class="card">
-                <h2>CAP XML Reports</h2>
-                <p>Use the buttons below to generate CAP (Common Alerting Protocol) XML feeds based on the current disaster data.</p>
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <a href="/api/cap" target="_blank" class="btn">Generate General CAP Feed (All Active)</a>
-                </div>
+        <section class="card">
+            <h2>CAP XML Reports</h2>
+            <p>Use the buttons below to generate CAP (Common Alerting Protocol) XML feeds based on the current disaster data.</p>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <a href="/api/cap" target="_blank" class="btn">Generate General CAP Feed (All Active)</a>
             </div>
-        </main>
-    </div>
+        </section>
+    </main>
 </body>
 </html>
