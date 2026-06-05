@@ -1,18 +1,7 @@
-.sync-status {
-    font-size: 0.9rem; 
-    color: #a0aec0; 
-    margin-top: 5px; 
-}
-
 .syncing { 
     color: #3498db; 
     font-weight: bold; 
 }
-
-#sync-indicator {
-    text-align: center;
-}
-
 /* Emergency Alert Overlay - Covers everything */
 .overlay {
     display: none;
@@ -107,4 +96,39 @@
     grid-template-columns: 1fr;
     gap: 25px;
     padding: 20px;
+}
+
+/* Responsiveness */
+@media screen and (max-width: 600px) {
+    #emergency-popup {
+        width: 95%;
+        max-width: 95%;
+    }
+    
+    .popup-header {
+        padding: 15px;
+    }
+    
+    .popup-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    .popup-body {
+        padding: 15px;
+        font-size: 1rem;
+    }
+    
+    .shelter-info {
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    #popup-map {
+        height: 200px;
+    }
+    
+    .btn-evacuate {
+        padding: 12px 25px;
+        font-size: 1.1rem;
+    }
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars(APP_NAME) ?> - <?= htmlspecialchars($pageTitle) ?></title>
+    <title><?= htmlspecialchars(APP_NAME) ?> - <?= htmlspecialchars($pageTitle ?? 'Fires') ?></title>
     <link rel="stylesheet" href="/css/style.css">
     <!-- Leaflet CSS for OpenStreetMap -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -20,7 +20,7 @@
         <div>
             <article class="card">
                 <header>
-                    <h2>Active Wildfire Detections</h2>
+                    <h2 class="recent-activities">Active Wildfire Detections</h2>
                 </header>
 
                 <section class="controls-bar">

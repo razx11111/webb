@@ -12,11 +12,20 @@
     
     <style>
         /* Essential layout for the map and split view */
-        #map { height: 450px; width: 100%; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; z-index: 1; }
+        #map { height: 450px; width: 100%; border-radius: 8px; border: 1px solid #ddd; margin: 0 0 20px 0; z-index: 1; box-sizing: border-box; }
         .admin-grid { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
         .shelter-list-section { margin-top: 30px; }
         .shelter-form { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .coords-badge { background: #e3f2fd; color: #1976d2; padding: 5px 10px; border-radius: 4px; font-family: monospace; display: block; margin-bottom: 15px; }
+
+        @media screen and (max-width: 992px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-container {
+                order: -1; /* Place form above map if needed, or keep order */
+            }
+        }
     </style>
 </head>
 <body>

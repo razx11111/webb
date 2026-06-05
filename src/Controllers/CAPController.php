@@ -76,12 +76,19 @@ class CAPController {
             $internalXmlLink = $baseUrl . "/api/cap/alert?type=" . $item['type'] . "&id=" . $data['id'];
 
             $writer->startElement('item');
-            $writer->writeElement('title', htmlspecialchars($data['title'] ?? $data['region']));
+            $writer->startElement('title');
+            $writer->writeRaw(htmlspecialchars($data['title'] ?? $data['region']));
+            $writer->endElement();
+
             $writer->writeElement('pubDate', date('r', strtotime($data['event_time'])));
-            $writer->writeElement('link', htmlspecialchars($internalXmlLink));
+
+            $writer->startElement('link');
+            $writer->writeRaw(htmlspecialchars($internalXmlLink));
+            $writer->endElement();
+
             $writer->startElement('guid');
             $writer->writeAttribute('isPermaLink', 'true');
-            $writer->text(htmlspecialchars($internalXmlLink));
+            $writer->writeRaw(htmlspecialchars($internalXmlLink));
             $writer->endElement(); // guid
 
             // Embed CAP XML directly
@@ -153,8 +160,8 @@ class CAPController {
      * Returns a pure CAP 1.2 XML for a specific record.
      */
     public function exportSingleCap() {
-        $type = $_GET['type'] ?? '';
-        $id = $_GET['id'] ?? null;
+        $type = $_GET['type'] ?? $_GET['amp;type'] ?? '';
+        $id = $_GET['id'] ?? $_GET['amp;id'] ?? null;
 
         if (empty($type) || empty($id)) {
             return $this->sendErrorResponse(400, 'Missing type or id parameters.');

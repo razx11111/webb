@@ -1,70 +1,163 @@
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>CoA - Crisis Containment Service Report</title>
+    <title>CoA - Crisis Containment Service: IEEE SRS Documentation</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body prefix="schema: http://schema.org">
 <article resource="#" typeof="schema:ScholarlyArticle">
     <header>
-        <h1>CoA (Crisis Containment Service)</h1>
+        <h1>System Requirements Specification (SRS) - Crisis Containment Service (CoA)</h1>
         <div role="contentinfo">
             <address>
-                Echipa: Gheoca Razvan si Stupu Eduard <br>
-                Universitatea "Alexandru Ioan Cuza", Facultatea de Informatică Iasi
+                Team: Gheoca Razvan & Stupu Eduard <br>
+                University "Alexandru Ioan Cuza", Faculty of Computer Science, Iasi
             </address>
         </div>
     </header>
 
     <section role="doc-abstract">
         <h2>Abstract</h2>
-        <p>CoA este o platformă Web pentru gestionarea situațiilor de urgență, oferind alerte în timp real, localizarea adăposturilor și rute de salvare, utilizând
-            protocolul CAP și arhitectura SOA.</p>
+        <p>
+            This document provides a comprehensive System Requirements Specification (SRS) for the Crisis Containment Service (CoA), following the IEEE 830-1998 standard. CoA is a disaster management platform designed to aggregate, process, and disseminate critical information regarding natural hazards such as floods, wildfires, and earthquakes. 
+        </p>
     </section>
 
     <section id="introduction">
-        <h2>1. Introducere</h2>
-        <p>Scopul aplicației este de a centraliza informațiile despre calamități și de a facilita comunicarea rapidă între autorități și populație.</p>
+        <h2>1. Introduction</h2>
+        <section id="purpose">
+            <h3>1.1 Purpose</h3>
+            <p>
+                The purpose of this document is to define the technical requirements and architectural design for the CoA platform. It serves as a blueprint for developers and a reference for stakeholders to understand the system's capabilities in disaster mitigation.
+            </p>
+        </section>
+        <section id="scope">
+            <h3>1.2 Scope</h3>
+            <p>
+                The CoA system centralizes data from international sources (GDACS, SeismicPortal) and provides a command-and-control center for authorities. It includes proximity alerts, shelter routing, and standardized data feeds using the Common Alerting Protocol (CAP 1.2).
+            </p>
+        </section>
+        <section id="definitions">
+            <h3>1.3 Definitions and Acronyms</h3>
+            <ul>
+                <li><strong>CAP:</strong> Common Alerting Protocol (v1.2).</li>
+                <li><strong>GDACS:</strong> Global Disaster Alert and Coordination System.</li>
+                <li><strong>EMSC:</strong> European-Mediterranean Seismological Centre.</li>
+                <li><strong>SOA:</strong> Service-Oriented Architecture.</li>
+                <li><strong>MVC:</strong> Model-View-Controller.</li>
+            </ul>
+        </section>
+        <section id="references">
+            <h3>1.4 References</h3>
+            <ul>
+                <li>IEEE Std 830-1998: Recommended Practice for Software Requirements Specifications.</li>
+                <li>OASIS Standard: Common Alerting Protocol v1.2.</li>
+            </ul>
+        </section>
     </section>
 
-    <section id="user-interaction">
-        <h2>2. Interacțiunea cu Utilizatorul</h2>
+    <section id="overall-description">
+        <h2>2. Overall Description</h2>
+        <section id="perspective">
+            <h3>2.1 Product Perspective</h3>
+            <p>
+                CoA is a standalone disaster management system that interacts with external sensors and data providers via REST APIs and RSS feeds. It is designed to be highly available and resilient, using Docker for infrastructure consistency.
+            </p>
+        </section>
+        <section id="functions">
+            <h3>2.2 Product Functions</h3>
+            <ul>
+                <li>Automated data ingestion and normalization from heterogeneous sources.</li>
+                <li>Real-time geolocation-based proximity hazard detection.</li>
+                <li>Dynamic shelter identification and path routing.</li>
+                <li>Standardized XML/RSS alert dissemination for third-party consumers.</li>
+            </ul>
+        </section>
+        <section id="user-characteristics">
+            <h3>2.3 User Characteristics</h3>
+            <ul>
+                <li><strong>Public Users:</strong> Citizens seeking immediate hazard information and safe routes.</li>
+                <li><strong>Authorities/Admins:</strong> Specialized personnel who manage safe zones and verify alert data.</li>
+            </ul>
+        </section>
+        <section id="constraints">
+            <h3>2.4 Constraints</h3>
+            <p>
+                The system must operate without external PHP frameworks to ensure minimal overhead and maximum control over security and performance. It requires a modern browser with Geolocation API support.
+            </p>
+        </section>
+        <section id="assumptions">
+            <h3>2.5 Assumptions and Dependencies</h3>
+            <ul>
+                <li><strong>External API Availability:</strong> It is assumed that GDACS and EMSC services remain operational and their XML/JSON schemas remain stable.</li>
+                <li><strong>Network Connectivity:</strong> The system depends on persistent internet access to fetch real-time disaster data and serve mapping tiles.</li>
+                <li><strong>Client Geolocation:</strong> Proximity alerts assume that users grant permission for location access in their browsers.</li>
+            </ul>
+        </section>
+    </section>
+
+    <section id="specific-requirements">
+        <h2>3. Specific Requirements</h2>
+        
+        <section id="architecture">
+            <h3>3.1 System Architecture</h3>
+            <p>
+                The system follows a strict MVC pattern coupled with an SOA philosophy.
+            </p>
+            <ul>
+                <li><strong>Core Layer:</strong> Custom Router (regex-based) and Singleton Database handler.</li>
+                <li><strong>Service Layer:</strong> <code>DataSync</code> for async fetching and <code>CAPService</code> for XML orchestration.</li>
+            </ul>
+        </section>
+
+        <section id="functional-requirements">
+            <h3>3.2 Functional Requirements</h3>
+            <section id="proximity-logic">
+                <h4>3.2.1 Proximity Detection (Haversine Algorithm)</h4>
+                <p>
+                    The system calculates great-circle distances using:
+                    <code>d = 2R * arcsin(sqrt(sin²(Δφ/2) + cos φ1 * cos φ2 * sin²(Δλ/2)))</code>.
+                    Threshold: 100km radius for events within the last 60 minutes.
+                </p>
+            </section>
+            <section id="api-spec">
+                <h4>3.2.2 API Specifications</h4>
+                <ul>
+                    <li><code>GET /api/disasters</code>: Consolidated JSON output.</li>
+                    <li><code>GET /api/cap</code>: RSS 2.0 with embedded CAP 1.2 XML.</li>
+                    <li><code>GET /api/proximity-check</code>: Server-side distance validation.</li>
+                </ul>
+            </section>
+        </section>
+
+        <section id="external-interface">
+            <h3>3.3 External Interface Requirements</h3>
+            <ul>
+                <li><strong>User Interface:</strong> Responsive HTML5/CSS3 dashboard with Leaflet.js map visualization.</li>
+                <li><strong>Software Interfaces:</strong> PostgreSQL 15, GDACS RSS Feed, SeismicPortal GeoJSON API.</li>
+            </ul>
+        </section>
+
+        <section id="non-functional-requirements">
+            <h3>3.4 Non-Functional Requirements</h3>
+            <ul>
+                <li><strong>Security:</strong> Bcrypt hashing for credentials and PDO prepared statements for SQLi prevention.</li>
+                <li><strong>Performance:</strong> Asynchronous data syncing and lightweight vanilla PHP execution.</li>
+                <li><strong>Usability:</strong> Mobile-first responsive design for high-stress emergency environments.</li>
+            </ul>
+        </section>
+    </section>
+
+    <section id="database-design">
+        <h2>4. Database Design</h2>
+        <p>
+            Relational schema optimized for geospatial storage:
+        </p>
         <ul>
-            <li><strong>Cetățean:</strong> Vizualizează harta alertelor, caută adăposturi, primește notificări.</li>
-            <li><strong>Autoritate:</strong> Autentificare, publicare alerte (CAP), gestionare rute de evacuare.</li>
+            <li>Normalization of coordinates using <code>DECIMAL(9,6)</code>.</li>
+            <li>Distinct tables for <code>earthquakes</code>, <code>floods</code>, and <code>fires</code> to support type-specific attributes.</li>
         </ul>
-    </section>
-
-    <section id="architecture">
-        <h2>3. Arhitectura Sistemului</h2>
-        <p>Sistemul urmează modelul <strong>Service-Oriented Architecture (SOA)</strong>. Backend-ul PHP funcționează ca un API REST, servind date JSON către frontend
-            prin AJAX.</p>
-        <figure typeof="sa:image">
-            <img src="../images/C4.png" alt="C4 Diagram">
-            <figcaption>Arhitectura de ansamblu conform modelului C4.</figcaption>
-        </figure>
-    </section>
-
-    <section id="requirements">
-        <h2>4. Cerințe Tehnice</h2>
-        <ul>
-            <li><strong>Backend:</strong> Vanilla PHP (fără framework-uri).</li>
-            <li><strong>Bază de date:</strong> MySQL (gestionată via PDO).</li>
-            <li><strong>Frontend:</strong> HTML5, CSS3 (Responsive), Vanilla JavaScript.</li>
-            <li><strong>Protocoale:</strong> Common Alerting Protocol (CAP) pentru alerte.</li>
-        </ul>
-    </section>
-
-    <section id="data-management">
-        <h2>5. Managementul Datelor</h2>
-        <p>Datele sunt preluate prin scraping/fetching de la INFP și stocate local. Sistemul permite exportul rapoartelor în formate <strong>CSV</strong> și
-            <strong>JSON</strong>.</p>
-    </section>
-
-    <section id="security">
-        <h2>6. Securitate</h2>
-        <p>Implementarea include tehnici împotriva SQL Injection (prepared statements) și XSS (sanitizarea datelor de ieșire).</p>
     </section>
 </article>
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars(APP_NAME) ?> - <?= htmlspecialchars($pageTitle) ?></title>
+    <title><?= htmlspecialchars(APP_NAME) ?> - <?= htmlspecialchars($pageTitle ?? 'Earthquakes') ?></title>
     <link rel="stylesheet" href="/css/style.css">
     <!-- Leaflet CSS for OpenStreetMap -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -20,7 +20,7 @@
         <div class="card-container">
             <article class="card">
                 <header>
-                    <h2>Recent Seismic Activity</h2>
+                    <h2 style="color: white;">Recent Seismic Activity</h2>
                 </header>
                 
                 <section class="controls-bar">

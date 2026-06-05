@@ -33,6 +33,8 @@ $router->get('/logout', 'AuthController', 'logout');
 // Shelter Routes (Admin & API)
 $router->get('/admin/shelters', 'ShelterController', 'adminIndex');
 $router->post('/admin/shelters/add', 'ShelterController', 'addShelter');
+$router->get('/admin/test-alert', 'DisasterController', 'showTestAlertForm');
+$router->post('/admin/test-alert', 'DisasterController', 'createTestAlert');
 $router->get('/api/shelters', 'ShelterController', 'apiGetShelters');
 
 // UI Routes (Returning HTML)

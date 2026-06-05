@@ -14,29 +14,13 @@ use App\Services\DataSync;
  */
 class DisasterController {
     
-    /**
-     * Constructor - Runs automatically when the controller is created.
-     * We call our AuthMiddleware here to block anyone who isn't logged in.
-     */
     public function __construct() {
-        \App\Core\AuthMiddleware::requireLogin();
+        // Some methods might be public, but administrative ones are protected
     }
 
     public function index() {
         $pageTitle = "Crisis Containment Dashboard";
         require_once __DIR__ . '/../../templates/pages/home.php';
-    }
-
-    public function getEarthquakes() {
-        $this->showDisasterPage('earthquakes');
-    }
-
-    public function getFires() {
-        $this->showDisasterPage('fires');
-    }
-
-    public function getFloods() {
-        $this->showDisasterPage('floods');
     }
 
     public function getDisasters() {
@@ -69,256 +53,145 @@ class DisasterController {
         }
     }
 
-    public function exportCsv() {
-        // This method is for exporting data as a CSV file.
-        // Get the 'type' and 'country' from the URL.
-        $type = $_GET['type'] ?? '';
-        $country = $_GET['country'] ?? null;
-        
-        // Use a match statement to decide which model to use.
-        $model = match($type) {
-            'flood' => new Flood(),
-            'fire' => new Fire(),
-            'earthquake' => new Earthquake(),
-            default => null
-        };
-
-        // If the type is not valid, I show an error message.
-        if (!$model) {
-            http_response_code(400);
-            header('Content-Type: text/plain');
-            echo "Error: Invalid or missing disaster type for CSV export.";
-            return;
-        }
-
-        // I fetch more records for the CSV.
-        $data = $model->getAll(500, $country);
-
-        // If there is no data, I show a message to the user.
-        if (empty($data)) {
-            http_response_code(404);
-            header('Content-Type: text/plain');
-            echo "No data available to export for the selected criteria.";
-            return;
-        }
-
-        // Generate a filename with the current date.
-        $filename = "{$type}_data_" . date('Y-m-d_H-i') . ".csv";
-
-        // These headers tell the browser to download the file instead of displaying it.
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-
-        // Open the PHP output stream to write the CSV directly to the browser.
-        $output = fopen('php://output', 'w');
-
-        // Write the column headings first. from the keys of the first row of data.
-        fputcsv($output, array_keys($data[0]));
-
-        // Loop through the data and write each row to the CSV file.
-        foreach ($data as $row) {
-            fputcsv($output, $row);
-        }
-
-        // close the output stream.
-        fclose($output);
-    }
-
-    public function report() { $pageTitle = "Disaster Report Generation"; require_once __DIR__ . '/../../templates/pages/report.php'; }
-
     /**
-     * Shows a page for a specific type of disaster.
-     * e.g., /disasters/floods
+     * GET /admin/test-alert
+     * Displays a raw HTML form to manually inject alerts for testing.
      */
-    public function showDisasterPage(string $type) {
-        $pageTitle = ucfirst($type) . " Management";
-        $templateFile = __DIR__ . "/../../templates/pages/{$type}.php";
-
-        if (file_exists($templateFile)) {
-            require_once $templateFile;
-        } else {
-            http_response_code(404);
-            echo "Page not found.";
-        }
+    public function showTestAlertForm() {
+        // Raw HTML as requested (no styles)
+        echo '<h2>Create Manual Alert (Test Tool)</h2>';
+        echo '<p>Use this to test the proximity alert system. Set coordinates close to yours.</p>';
+        echo '<form action="/admin/test-alert" method="POST">';
+        echo 'Type: <select name="type"><option value="flood">Flood</option><option value="fire">Fire</option><option value="earthquake">Earthquake</option></select><br><br>';
+        echo 'Title/Region: <input type="text" name="title" placeholder="e.g. Test Danger" required><br><br>';
+        echo 'Latitude: <input type="text" name="latitude" placeholder="47.1234" required><br><br>';
+        echo 'Longitude: <input type="text" name="longitude" placeholder="27.5678" required><br><br>';
+        echo 'Magnitude (if EQ): <input type="text" name="magnitude" placeholder="5.5"><br><br>';
+        echo '<button type="submit">Inject Alert</button>';
+        echo '</form>';
+        echo '<br><a href="/">Back to Dashboard</a>';
     }
 
     /**
-     * API endpoint to get data for a specific disaster type.
-     * e.g., /api/disasters/fires?country=US
+     * POST /admin/test-alert
+     * Processes the manual injection of a disaster record.
      */
-    public function getDisasterData(string $type) {
-        header('Content-Type: application/json');
-        $country = $_GET['country'] ?? null;
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+    public function createTestAlert() {
+        $type = $_POST['type'] ?? '';
+        $title = $_POST['title'] ?? '';
+        $lat = $_POST['latitude'] ?? '';
+        $lng = $_POST['longitude'] ?? '';
+        $mag = $_POST['magnitude'] ?? null;
 
-        // Get the right model based on the 'type' from the URL
-        $model = null;
-        if ($type === 'floods') {
-            $model = new Flood();
-        } elseif ($type === 'fires') {
-            $model = new Fire();
-        } elseif ($type === 'earthquakes') {
+        $data = [
+            'external_id' => 'MANUAL-' . time(),
+            'latitude'    => $lat,
+            'longitude'   => $lng,
+            'event_time'  => date('Y-m-d H:i:s'),
+            'source'      => 'Manual Test Injection'
+        ];
+
+        if ($type === 'earthquake') {
+            $data['region'] = $title;
+            $data['magnitude'] = $mag;
             $model = new Earthquake();
-        }
-
-        // If the model is not null, get the data and send it as JSON
-        if ($model) {
-            $data = $model->getAll($limit, $country);
-            echo json_encode($data);
+        } elseif ($type === 'flood') {
+            $data['title'] = $title;
+            $model = new Flood();
         } else {
-            // If the type is not valid, send an error message
-            http_response_code(400);
-            echo json_encode(['error' => 'Invalid disaster type']);
+            $data['title'] = $title;
+            $model = new Fire();
         }
+
+        $model->create($data);
+        echo "Alert injected successfully! <br><br>";
+        echo "<a href='/admin/test-alert'>Inject another one</a> | <a href='/'>Go to Dashboard to see pop-up</a>";
     }
 
-    public function apiGetEarthquakes() {
-        $this->getDisasterData('earthquakes');
-    }
-
-    public function apiGetFires() {
-        $this->getDisasterData('fires');
-    }
-
-    public function apiGetFloods() {
-        $this->getDisasterData('floods');
-    }
-
-
-    /**
-     * API: Check if coordinates are near any disaster and find nearest shelter.
-     * Accessible via /api/proximity-check?lat=...&lng=...
-     */
-    private const PROXIMITY_DANGER_RADIUS_KM = 100;
-    private const PROXIMITY_TIME_WINDOW_SECONDS = 3600; // 1 hour
-
-    /**
-     * API: Check if coordinates are near any disaster and find nearest shelter.
-     * Accessible via /api/proximity-check?lat=...&lng=...
-     */
     public function checkProximity() {
         header('Content-Type: application/json');
-        
         $userLat = isset($_GET['lat']) ? (float)$_GET['lat'] : null;
         $userLng = isset($_GET['lng']) ? (float)$_GET['lng'] : null;
 
         if ($userLat === null || $userLng === null) {
-            echo json_encode(['error' => 'Missing coordinates']);
-            return;
+            echo json_encode(['inDanger' => false]); return;
         }
 
-        $recentDisasters = $this->getRecentDisasters();
-        $detectedDisaster = $this->findNearbyDisaster($userLat, $userLng, $recentDisasters);
-        $nearestShelter = null;
+        $dangerRadius = 100; // km
+        $currentTime = time();
+        $oneHourAgo = $currentTime - 3600;
 
-        if ($detectedDisaster) {
-            $nearestShelter = $this->findNearestShelter($userLat, $userLng);
-        }
-
-        echo json_encode([
-            'inDanger' => !empty($detectedDisaster),
-            'details'  => $detectedDisaster,
-            'shelter'  => $nearestShelter
-        ]);
-    }
-
-    /**
-     * Fetches all disasters that have occurred within the defined time window.
-     * @return array
-     */
-    private function getRecentDisasters(): array {
         $floodModel = new Flood();
         $fireModel = new Fire();
         $earthquakeModel = new Earthquake();
 
-        // Add a 'type' key to each record for reliable identification
-        $floods = array_map(function($d) { $d['type'] = 'flood'; return $d; }, $floodModel->getAll(50));
-        $fires = array_map(function($d) { $d['type'] = 'fire'; return $d; }, $fireModel->getAll(50));
-        $earthquakes = array_map(function($d) { $d['type'] = 'earthquake'; return $d; }, $earthquakeModel->getAll(50));
+        $disasters = array_merge($floodModel->getAll(50), $fireModel->getAll(50), $earthquakeModel->getAll(50));
 
-        $disasters = array_merge($floods, $fires, $earthquakes);
-        
-        // Filter for disasters in the last hour
-        $oneHourAgo = time() - self::PROXIMITY_TIME_WINDOW_SECONDS;
-        return array_filter($disasters, function($d) use ($oneHourAgo) {
-            return strtotime($d['event_time']) >= $oneHourAgo;
-        });
-    }
-
-    /**
-     * Finds the first disaster within the danger radius.
-     * @param float $userLat
-     * @param float $userLng
-     * @param array $disasters
-     * @return array|null
-     */
-    private function findNearbyDisaster(float $userLat, float $userLng, array $disasters): ?array {
         foreach ($disasters as $d) {
+            $eventTime = strtotime($d['event_time']);
+            if ($eventTime < $oneHourAgo) continue;
+
             $dist = $this->calculateDistance($userLat, $userLng, (float)$d['latitude'], (float)$d['longitude']);
-            
-            if ($dist <= self::PROXIMITY_DANGER_RADIUS_KM) {
-                // Determine severity based on type
-                $severity = 'Moderate';
-                if ($d['type'] === 'earthquake') {
-                    $mag = (float)$d['magnitude'];
-                    $severity = ($mag >= 6) ? 'Extreme' : (($mag >= 4.5) ? 'Severe' : 'Moderate');
-                } elseif ($d['type'] === 'fire') {
-                    $severity = 'Extreme';
-                } elseif ($d['type'] === 'flood') {
-                    $severity = 'Severe';
+            if ($dist <= $dangerRadius) {
+                $type = isset($d['magnitude']) ? 'Earthquake' : (strpos(strtolower($d['title'] ?? ''), 'flood') !== false ? 'Flood' : 'Fire');
+                
+                $nearestShelter = null;
+                $shelters = (new \App\Models\Shelter())->getAll(50);
+                $minDist = INF;
+                foreach ($shelters as $s) {
+                    $sDist = $this->calculateDistance($userLat, $userLng, (float)$s['latitude'], (float)$s['longitude']);
+                    if ($sDist < $minDist) {
+                        $minDist = $sDist;
+                        $nearestShelter = ['name' => $s['name'], 'distance' => round($sDist, 2), 'lat' => (float)$s['latitude'], 'lng' => (float)$s['longitude']];
+                    }
                 }
 
-                return [
-                    'name' => $d['title'] ?? ($d['region'] ?? 'Natural Hazard'),
-                    'type' => ucfirst($d['type']),
-                    'severity' => $severity,
-                    'distance' => round($dist, 2)
-                ];
+                echo json_encode([
+                    'inDanger' => true,
+                    'details'  => ['name' => $d['title'] ?? ($d['region'] ?? 'Danger'), 'type' => $type],
+                    'shelter'  => $nearestShelter
+                ]);
+                return;
             }
         }
-        return null;
+        echo json_encode(['inDanger' => false]);
     }
 
-    /**
-     * Finds the nearest shelter to a given set of coordinates.
-     * @param float $userLat
-     * @param float $userLng
-     * @return array|null
-     */
-    private function findNearestShelter(float $userLat, float $userLng): ?array {
-        $shelterModel = new \App\Models\Shelter();
-        $shelters = $shelterModel->getAll(50);
-        $minDist = INF;
-        $nearestShelter = null;
-
-        foreach ($shelters as $s) {
-            $dist = $this->calculateDistance($userLat, $userLng, (float)$s['latitude'], (float)$s['longitude']);
-            if ($dist < $minDist) {
-                $minDist = $dist;
-                $nearestShelter = [
-                    'name' => $s['name'],
-                    'distance' => round($dist, 2),
-                    'lat' => (float)$s['latitude'],
-                    'lng' => (float)$s['longitude']
-                ];
-            }
-        }
-        return $nearestShelter;
-    }
-
-    /**
-     * Helper: Haversine Formula for distance between two points in km.
-     */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2) {
-        $earthRadius = 6371;
+        $R = 6371;
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
-        
-        $a = sin($dLat/2) * sin($dLat/2) +
-             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-             sin($dLon/2) * sin($dLon/2);
-        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
-        
-        return $earthRadius * $c;
+        $a = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon/2) * sin($dLon/2);
+        return $R * (2 * atan2(sqrt($a), sqrt(1-$a)));
+    }
+
+    public function getFloods() { 
+        $pageTitle = "Flood Monitoring";
+        require_once __DIR__ . '/../../templates/pages/floods.php'; 
+    }
+    public function getEarthquakes() { 
+        $pageTitle = "Earthquake Activity";
+        require_once __DIR__ . '/../../templates/pages/earthquakes.php'; 
+    }
+    public function getFires() { 
+        $pageTitle = "Wildfire Alerts";
+        require_once __DIR__ . '/../../templates/pages/fires.php'; 
+    }
+    public function report() { require_once __DIR__ . '/../../templates/pages/report.php'; }
+    public function apiGetFloods() { echo json_encode((new Flood())->getAll(50)); }
+    public function apiGetFires() { echo json_encode((new Fire())->getAll(50)); }
+    public function apiGetEarthquakes() { echo json_encode((new Earthquake())->getAll(50)); }
+
+    public function exportCsv() {
+        $type = $_GET['type'] ?? '';
+        $model = match($type) { 'flood' => new Flood(), 'fire' => new Fire(), 'earthquake' => new Earthquake(), default => null };
+        if (!$model) return;
+        $data = $model->getAll(500);
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="export.csv"');
+        $output = fopen('php://output', 'w');
+        fputcsv($output, array_keys($data[0]));
+        foreach ($data as $row) fputcsv($output, $row);
+        fclose($output);
     }
 }

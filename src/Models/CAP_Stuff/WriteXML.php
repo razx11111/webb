@@ -17,7 +17,6 @@ class WriteXML {
 
     public function __construct($version, $encoding){
         $this->addRow(('<'.'?xml version="'.$version.'" encoding="'.$encoding.'"'.' ?'.'>'));
-        $this->addRow(('<'.'?xml-stylesheet type="text/xsl" href="cap_style.xsl" ?'.'>'));
     }
 
     /**

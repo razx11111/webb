@@ -74,11 +74,12 @@
         #popup-map {
             height: 280px;
             width: 100%;
-            margin-top: 15px;
+            margin: 15px 0 0 0;
             border-radius: 8px;
             border: 1px solid #ddd;
             z-index: 10002;
             background: #f9f9f9;
+            box-sizing: border-box;
         }
 
         .popup-footer {
@@ -131,7 +132,6 @@
 
     <header class="dashboard-header">
         <h1><?= APP_NAME ?></h1>
-        <p id="sync-indicator" class="sync-status">Checking for updates...</p>
     </header>
 
     <section class="container">
@@ -176,7 +176,6 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const statusLabel = document.getElementById('sync-indicator');
             const overlay = document.getElementById('alert-overlay');
             const alertTypeDisplay = document.getElementById('alert-type');
             const alertNameDisplay = document.getElementById('alert-name');
@@ -253,7 +252,6 @@
             const autoSync = async () => {
                 try {
                     await fetch('/api/sync');
-                    if(statusLabel) statusLabel.textContent = '✅ System Live';
                     loadData();
                 } catch (e) { if(statusLabel) statusLabel.textContent = ' Sync suspended'; }
                 finally { setTimeout(autoSync, 300000); }
@@ -288,8 +286,7 @@
 
                     // Use .textContent to safely insert data.
                     var title = isEarthquake ? item.region : item.title;
-                    // Safely truncate the text
-                    cell1.textContent = title.length > 25 ? title.substring(0, 25) + '...' : title;
+                    cell1.textContent = title;
                     cell2.textContent = new Date(item.event_time).toLocaleTimeString();
                     
                     row.appendChild(cell1);

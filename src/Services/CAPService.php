@@ -30,65 +30,68 @@ class CAPService {
         $xml = new WriteXML("1.0", "UTF-8");
         
         // --- Root Element ---
-        $xml->tagOpen("cap:alert", [
-            'xmlns:cap' => 'urn:oasis:names:tc:emergency:cap:1.2'
+        $xml->tagOpen("alert", [
+            'xmlns' => 'urn:oasis:names:tc:emergency:cap:1.2'
         ]);
 
         // --- Alert Metadata ---
-        $xml->tagSimple("cap:identifier", $cap->identifier);
-        $xml->tagSimple("cap:sender", $cap->sender);
-        $xml->tagSimple("cap:sent", $cap->sent);
-        $xml->tagSimple("cap:status", $cap->status);
-        $xml->tagSimple("cap:msgType", $cap->msgType);
-        $xml->tagSimple("cap:source", $cap->source);
-        $xml->tagSimple("cap:scope", $cap->scope);
+        $xml->tagSimple("identifier", $cap->identifier);
+        $xml->tagSimple("sender", $cap->sender);
+        $xml->tagSimple("sent", $cap->sent);
+        $xml->tagSimple("status", $cap->status);
+        $xml->tagSimple("msgType", $cap->msgType);
+        $xml->tagSimple("source", $cap->source);
+        $xml->tagSimple("scope", $cap->scope);
 
         // --- Info Block (The main content of the alert) ---
-        $xml->tagOpen("cap:info");
-        $xml->tagSimple("cap:category", $cap->category[0]);
-        $xml->tagSimple("cap:event", $cap->event);
-        $xml->tagSimple("cap:urgency", $cap->urgency);
-        $xml->tagSimple("cap:severity", $cap->severity);
-        $xml->tagSimple("cap:certainty", $cap->certainty);
-        $xml->tagSimple("cap:headline", $cap->headline);
-        $xml->tagSimple("cap:description", $cap->description);
+        $xml->tagOpen("info");
+        
+        $category = is_array($cap->category) ? ($cap->category[0] ?? 'Other') : ($cap->category ?? 'Other');
+        $xml->tagSimple("category", $category);
+        
+        $xml->tagSimple("event", $cap->event);
+        $xml->tagSimple("urgency", $cap->urgency);
+        $xml->tagSimple("severity", $cap->severity);
+        $xml->tagSimple("certainty", $cap->certainty);
+        $xml->tagSimple("headline", $cap->headline);
+        $xml->tagSimple("description", $cap->description);
 
         // --- Instruction Block ---
-        // Dynamically includes information about nearby shelters.
-        $shelterModel = new \App\Models\Shelter();
-        $shelters = $shelterModel->getAll(5); // Get up to 5 shelters.
         $instructionText = "Please proceed to the nearest safe shelter. Available shelters: ";
-        if (!empty($shelters)) {
-            $shelterList = [];
-            foreach ($shelters as $s) {
-                $shelterList[] = "{$s['name']} (Lat: {$s['latitude']}, Lng: {$s['longitude']})";
+        try {
+            $shelterModel = new \App\Models\Shelter();
+            $shelters = $shelterModel->getAll(5); 
+            if (!empty($shelters)) {
+                $shelterList = [];
+                foreach ($shelters as $s) {
+                    $shelterList[] = "{$s['name']} (Lat: {$s['latitude']}, Lng: {$s['longitude']})";
+                }
+                $instructionText .= implode(", ", $shelterList);
+            } else {
+                $instructionText .= "None currently listed in the system.";
             }
-            $instructionText .= implode(", ", $shelterList);
-        } else {
-            $instructionText .= "None currently listed in the system.";
+        } catch (\Exception $e) {
+            $instructionText .= "Consult local authorities for shelter locations.";
         }
-        $xml->tagSimple("cap:instruction", $instructionText);
+        $xml->tagSimple("instruction", $instructionText);
 
-        $xml->tagSimple("cap:web", $cap->web);
+        $xml->tagSimple("web", $cap->web);
 
         // --- Resource Block ---
-        // Provides a link to the original alert source for more information.
-        $xml->tagOpen("cap:resource");
-        $xml->tagSimple("cap:resourceDesc", "External Link to Original Alert");
-        $xml->tagSimple("cap:mimeType", "text/html");
-        $xml->tagSimple("cap:uri", $cap->web);
-        $xml->tagClose("cap:resource");
+        $xml->tagOpen("resource");
+        $xml->tagSimple("resourceDesc", "External Link to Original Alert");
+        $xml->tagSimple("mimeType", "text/html");
+        $xml->tagSimple("uri", $cap->web);
+        $xml->tagClose("resource");
 
         // --- Area Block ---
-        // Describes the geographic area affected by the alert.
-        $xml->tagOpen("cap:area");
-        $xml->tagSimple("cap:areaDesc", $cap->areaDesc);
-        // CAP uses "lat,long radius" format for a circle. A radius of 0 indicates a point location.
-        $xml->tagSimple("cap:circle", "{$data['latitude']},{$data['longitude']} 0"); 
-        $xml->tagClose("cap:area");
+        $xml->tagOpen("area");
+        $xml->tagSimple("areaDesc", $cap->areaDesc);
+        $xml->tagSimple("circle", "{$data['latitude']},{$data['longitude']} 0"); 
+        $xml->tagClose("area");
 
-        $xml->tagClose("cap:info");
-        $xml->tagClose("cap:alert");
+        $xml->tagClose("info");
+        $xml->tagClose("alert");
 
         return $xml->output();
     }
