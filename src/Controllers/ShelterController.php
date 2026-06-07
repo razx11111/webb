@@ -34,6 +34,7 @@ class ShelterController {
      * API: Get all shelters as JSON.
      */
     public function apiGetShelters() {
+        AuthMiddleware::requireLogin();
         header('Content-Type: application/json');
         $model = new Shelter();
         echo json_encode($model->getAll(100));

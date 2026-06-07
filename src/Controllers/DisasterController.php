@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Core\AuthMiddleware;
 use App\Models\Flood;
 use App\Models\Fire;
 use App\Models\Earthquake;
@@ -19,11 +20,13 @@ class DisasterController {
     }
 
     public function index() {
+        AuthMiddleware::requireLogin();
         $pageTitle = "Crisis Containment Dashboard";
         require_once __DIR__ . '/../../templates/pages/home.php';
     }
 
     public function getDisasters() {
+        AuthMiddleware::requireLogin();
         header('Content-Type: application/json');
         try {
             $floodModel = new Flood();
@@ -42,6 +45,7 @@ class DisasterController {
     }
 
     public function sync() {
+        AuthMiddleware::requireLogin();
         header('Content-Type: application/json');
         try {
             $syncService = new DataSync();
@@ -58,6 +62,7 @@ class DisasterController {
      * Displays a raw HTML form to manually inject alerts for testing.
      */
     public function showTestAlertForm() {
+        AuthMiddleware::requireLogin();
         // Raw HTML as requested (no styles)
         echo '<h2>Create Manual Alert (Test Tool)</h2>';
         echo '<p>Use this to test the proximity alert system. Set coordinates close to yours.</p>';
@@ -77,6 +82,7 @@ class DisasterController {
      * Processes the manual injection of a disaster record.
      */
     public function createTestAlert() {
+        AuthMiddleware::requireLogin();
         $type = $_POST['type'] ?? '';
         $title = $_POST['title'] ?? '';
         $lat = $_POST['latitude'] ?? '';
@@ -109,6 +115,7 @@ class DisasterController {
     }
 
     public function checkProximity() {
+        AuthMiddleware::requireLogin();
         header('Content-Type: application/json');
         $userLat = isset($_GET['lat']) ? (float)$_GET['lat'] : null;
         $userLng = isset($_GET['lng']) ? (float)$_GET['lng'] : null;
@@ -165,24 +172,40 @@ class DisasterController {
         return $R * (2 * atan2(sqrt($a), sqrt(1-$a)));
     }
 
-    public function getFloods() { 
+    public function getFloods() {
+        AuthMiddleware::requireLogin();
         $pageTitle = "Flood Monitoring";
         require_once __DIR__ . '/../../templates/pages/floods.php'; 
     }
-    public function getEarthquakes() { 
+    public function getEarthquakes() {
+        AuthMiddleware::requireLogin();
         $pageTitle = "Earthquake Activity";
         require_once __DIR__ . '/../../templates/pages/earthquakes.php'; 
     }
-    public function getFires() { 
+    public function getFires() {
+        AuthMiddleware::requireLogin();
         $pageTitle = "Wildfire Alerts";
         require_once __DIR__ . '/../../templates/pages/fires.php'; 
     }
-    public function report() { require_once __DIR__ . '/../../templates/pages/report.php'; }
-    public function apiGetFloods() { echo json_encode((new Flood())->getAll(50)); }
-    public function apiGetFires() { echo json_encode((new Fire())->getAll(50)); }
-    public function apiGetEarthquakes() { echo json_encode((new Earthquake())->getAll(50)); }
+    public function report() {
+        AuthMiddleware::requireLogin();
+        require_once __DIR__ . '/../../templates/pages/report.php';
+    }
+    public function apiGetFloods() {
+        AuthMiddleware::requireLogin();
+        echo json_encode((new Flood())->getAll(50));
+    }
+    public function apiGetFires() {
+        AuthMiddleware::requireLogin();
+        echo json_encode((new Fire())->getAll(50));
+    }
+    public function apiGetEarthquakes() {
+        AuthMiddleware::requireLogin();
+        echo json_encode((new Earthquake())->getAll(50));
+    }
 
     public function exportCsv() {
+        AuthMiddleware::requireLogin();
         $type = $_GET['type'] ?? '';
         $model = match($type) { 'flood' => new Flood(), 'fire' => new Fire(), 'earthquake' => new Earthquake(), default => null };
         if (!$model) return;
