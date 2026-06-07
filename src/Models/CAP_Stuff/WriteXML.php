@@ -86,13 +86,6 @@ class WriteXML {
     }
 
     /**
-     * Wraps content in CDATA tags.
-     */
-    public function cdata($content) {
-        return '<![CDATA[' . $content . ']]>';
-    }
-
-    /**
      * Adds an XML comment.
      */
     public function addComment($content) {

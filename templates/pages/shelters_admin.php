@@ -10,23 +10,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
-    <style>
-        /* Essential layout for the map and split view */
-        #map { height: 450px; width: 100%; border-radius: 8px; border: 1px solid #ddd; margin: 0 0 20px 0; z-index: 1; box-sizing: border-box; }
-        .admin-grid { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
-        .shelter-list-section { margin-top: 30px; }
-        .shelter-form { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .coords-badge { background: #e3f2fd; color: #1976d2; padding: 5px 10px; border-radius: 4px; font-family: monospace; display: block; margin-bottom: 15px; }
-
-        @media screen and (max-width: 992px) {
-            .admin-grid {
-                grid-template-columns: 1fr;
-            }
-            .form-container {
-                order: -1; /* Place form above map if needed, or keep order */
-            }
-        }
-    </style>
 </head>
 <body>
     <header class="dashboard-header" style="background-color: #2c3e50; color: white; padding: 1rem; text-align: center;">
@@ -57,7 +40,7 @@
                     </header>
                     
                     <?php if(isset($_GET['success'])): ?>
-                        <strong class="alert-success">✅ Shelter added successfully!</strong>
+                        <strong class="alert-success"> Shelter added successfully!</strong>
                     <?php endif; ?>
 
                     <form action="/admin/shelters/add" method="POST" class="shelter-form">
@@ -94,7 +77,7 @@
             <!-- Descriptive List -->
             <section class="shelter-list-section card">
                 <header>
-                    <h2>Existing Shelters Registry</h2>
+                    <h2 style="color: white;">Existing Shelters Registry</h2>
                 </header>
                 <section class="table-responsive">
                     <table id="shelters-table">
