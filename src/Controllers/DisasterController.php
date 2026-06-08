@@ -193,15 +193,21 @@ class DisasterController {
     }
     public function apiGetFloods() {
         AuthMiddleware::requireLogin();
-        echo json_encode((new Flood())->getAll(50));
+        header('Content-Type: application/json');
+        $country = $_GET['country'] ?? '';
+        echo json_encode((new Flood())->getAll(50, $country));
     }
     public function apiGetFires() {
         AuthMiddleware::requireLogin();
-        echo json_encode((new Fire())->getAll(50));
+        header('Content-Type: application/json');
+        $country = $_GET['country'] ?? '';
+        echo json_encode((new Fire())->getAll(50, $country));
     }
     public function apiGetEarthquakes() {
         AuthMiddleware::requireLogin();
-        echo json_encode((new Earthquake())->getAll(50));
+        header('Content-Type: application/json');
+        $country = $_GET['country'] ?? '';
+        echo json_encode((new Earthquake())->getAll(50, $country));
     }
 
     public function exportCsv() {
