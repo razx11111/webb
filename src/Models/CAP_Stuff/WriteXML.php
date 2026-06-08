@@ -3,10 +3,7 @@
 namespace App\Models\CAP_Stuff;
 
 /**
- * A legacy, custom XML writer class.
- * NOTE: This class uses older methods for building XML. For new features,
- * it is recommended to use PHP's built-in XMLWriter class, which is more robust and standard.
- * This class has been updated to use modern PHP syntax.
+ * custom XML writer class.
  */
 class WriteXML {
     private $file = [];
@@ -20,8 +17,8 @@ class WriteXML {
     }
 
     /**
-     * Adds a simple, self-contained XML tag with a value.
-     * Example: <tag>value</tag> or <tag/>
+     * adds self-contained XML tag with a value
+     * like: <tag>value</tag> or <tag/>
      */
     public function tagSimple($tag, $value = '', $options = [], $trimtext = false) {
         if ($trimtext) $value = trim($value);
@@ -33,7 +30,7 @@ class WriteXML {
             $row .= htmlspecialchars($value, ENT_QUOTES, "UTF-8");
             $row .= '</' . $tag . '>';
         } else {
-            // A special case for the 'summary' tag, which should not be empty.
+            // a special case for the 'summary' tag, which should not be empty
             if ($tag == 'summary') {
                 $row .= '>';
                 $row .= 'No Summary';

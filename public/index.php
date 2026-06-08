@@ -19,10 +19,6 @@ use App\Core\Router;
 // Initialize the Router
 $router = new Router();
 
-
-//Define Application Routes
-
-
 // Auth Routes
 $router->get('/login', 'AuthController', 'showLogin');
 $router->post('/login', 'AuthController', 'login');
@@ -44,7 +40,7 @@ $router->get('/floods', 'DisasterController', 'getFloods');
 $router->get('/report', 'DisasterController', 'report');
 $router->get('/', 'DisasterController', 'index'); 
 
-// API Routes (Used by AJAX, returning JSON)
+// API Routes (used by ajax, return JSONs or files)
 $router->get('/api/disasters', 'DisasterController', 'getDisasters');
 $router->get('/api/earthquakes', 'DisasterController', 'apiGetEarthquakes');
 $router->get('/api/fires', 'DisasterController', 'apiGetFires');
@@ -55,5 +51,4 @@ $router->get('/api/cap', 'CAPController', 'generateCapFeed');
 $router->get('/api/cap/alert', 'CAPController', 'exportSingleCap');
 $router->get('/api/csv', 'DisasterController', 'exportCsv');
 
-// Run the application
 $router->run();

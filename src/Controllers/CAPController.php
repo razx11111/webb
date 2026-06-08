@@ -2,7 +2,6 @@
 
 namespace App\Controllers;
 
-use App\Core\AuthMiddleware;
 use App\Models\Flood;
 use App\Models\Fire;
 use App\Models\Earthquake;
@@ -27,7 +26,6 @@ class CAPController {
      * /api/cap?type=all&latest=15
      */
     public function generateCapFeed() {
-        AuthMiddleware::requireLogin();
         $type = $_GET['type'] ?? 'all';
         $limit = isset($_GET['latest']) ? (int)$_GET['latest'] : 15;
 
@@ -56,7 +54,7 @@ class CAPController {
      */
     private function renderRssFeed(array $disasters) {
         $capService = new CAPService();
-        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]";
+        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]"; 
 
         header('Content-Type: application/rss+xml; charset=utf-8');
         $writer = new \XMLWriter();
@@ -162,7 +160,6 @@ class CAPController {
      * Returns a pure CAP 1.2 XML for a specific record.
      */
     public function exportSingleCap() {
-        AuthMiddleware::requireLogin();
         $type = $_GET['type'] ?? $_GET['amp;type'] ?? '';
         $id = $_GET['id'] ?? $_GET['amp;id'] ?? null;
 

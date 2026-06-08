@@ -242,14 +242,13 @@ class CAP {
      * @var string|null The maximum altitude of the affected area in feet above mean sea level (CONDITIONAL).
      */
     public $ceiling;
-    //endregion
 
     public $useingaclass = false;
 
     function __construct($post = "", $class = false) {
         // This constructor has two modes:
-        // 1. If $post is an array, it populates the CAP object's properties from the array keys.
-        //    This is used when creating a CAP message from form data.
+        //    If $post is an array, it populates the CAP object's properties from the array keys
+        //    this is used when creating a CAP message from form data.
         if(is_array($post) && $class == false) {
             foreach($post as $key => $value) {
                 if(property_exists($this, $key)) {
@@ -257,7 +256,7 @@ class CAP {
                 }
             }
         }
-        // 2. If $class is true, it's a simplified mode for creating a CAP object programmatically.
+        //    If $class is true, it's a simplified mode for creating a CAP object programmatically.
         //    It just sets the 'sent' time.
         elseif(is_string($post) && $class == true) {
             $this->sent = $post;
@@ -272,7 +271,6 @@ class CAP {
         $xml->tagOpen('alert', ['xmlns' => 'urn:oasis:names:tc:emergency:cap:1.2']);
 
         // --- Main Alert Block ---
-        // Builds the core metadata for the alert message.
         $xml->tagSimple('identifier', $this->identifier);
         $xml->tagSimple('sender', $this->sender);
 
@@ -303,8 +301,6 @@ class CAP {
         $xml->tagSimple('incidents', $this->incidents);
 
         // --- Info Block ---
-        // A CAP message can contain multiple 'info' blocks, for example, one for each language.
-        // This loop builds an 'info' block for each language provided in the 'language' array.
         if (is_array($this->language) && count($this->language) > 0) {
             foreach ($this->language as $lang) {
                 if (!empty($lang)) {
@@ -326,7 +322,6 @@ class CAP {
                     $xml->tagSimple('certainty', $this->certainty);
                     $xml->tagSimple('audience', $this->audience);
 
-                    // Build <eventCode> sub-tags from the 'eventCode' array.
                     if (!empty($this->eventCode['valueName']) && is_array($this->eventCode['valueName'])) {
                         foreach ($this->eventCode['valueName'] as $key => $valueName) {
                             if (!empty($valueName)) {
@@ -338,7 +333,6 @@ class CAP {
                         }
                     }
 
-                    // Format date-time fields, which can be arrays of components or pre-formatted strings.
                     if ($this->useingaclass === false && is_array($this->effective)) {
                         $xml->tagSimple(
                             'effective',
@@ -390,7 +384,6 @@ class CAP {
                     }
 
                     // --- Area Block ---
-                    // Builds the 'area' block describing the affected geographic region.
                     if (!empty($this->areaDesc) || !empty($this->polygon) || !empty($this->circle) || !empty($this->geocode)) {
                         $xml->tagOpen('area');
                         $xml->tagSimple('areaDesc', $this->areaDesc);
