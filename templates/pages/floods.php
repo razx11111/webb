@@ -102,7 +102,7 @@
                 });
 
                 if (bounds.length > 0) {
-                    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
+                    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
                 }
             };
 
