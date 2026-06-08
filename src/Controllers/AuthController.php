@@ -34,7 +34,7 @@ class AuthController {
 
         // Get the data from the form
         // sanitize the input to prevent security issues
-        $username = trim(filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING));
+        $username = trim(filter_input(INPUT_POST, 'username', FILTER_SANITIZE_SPECIAL_CHARS));
         $email = trim(filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL));
         $password = filter_input(INPUT_POST, 'password');
         
