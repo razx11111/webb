@@ -63,6 +63,7 @@ class DisasterController {
      */
     public function showTestAlertForm() {
         AuthMiddleware::requireLogin();
+        $this->requireAdmin();
         // Raw HTML as requested (no styles)
         echo '<h2>Create Manual Alert (Test Tool)</h2>';
         echo '<p>Use this to test the proximity alert system. Set coordinates close to yours.</p>';
@@ -83,6 +84,7 @@ class DisasterController {
      */
     public function createTestAlert() {
         AuthMiddleware::requireLogin();
+        $this->requireAdmin();
         $type = $_POST['type'] ?? '';
         $title = $_POST['title'] ?? '';
         $lat = $_POST['latitude'] ?? '';
@@ -222,5 +224,27 @@ class DisasterController {
         fputcsv($output, array_keys($data[0]));
         foreach ($data as $row) fputcsv($output, $row);
         fclose($output);
+    }
+
+    /**
+     * Ensures that the current user is an administrator.
+     */
+    private function requireAdmin() {
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0 || $_SERVER['REQUEST_METHOD'] === 'POST') {
+                $this->sendJsonError(403, 'Forbidden: Administrator access required.');
+            } else {
+                http_response_code(403);
+                echo "<h2>403 Forbidden</h2><p>Administrator access required to use this tool.</p>";
+                echo '<a href="/">Back to Dashboard</a>';
+            }
+            exit();
+        }
+    }
+
+    private function sendJsonError(int $statusCode, string $message) {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => $message]);
     }
 }
