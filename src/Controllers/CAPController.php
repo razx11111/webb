@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Core\AuthMiddleware;
 use App\Models\Flood;
 use App\Models\Fire;
 use App\Models\Earthquake;
@@ -26,6 +27,7 @@ class CAPController {
      * /api/cap?type=all&latest=15
      */
     public function generateCapFeed() {
+        AuthMiddleware::requireLogin();
         $type = $_GET['type'] ?? 'all';
         $limit = isset($_GET['latest']) ? (int)$_GET['latest'] : 15;
 
@@ -160,6 +162,7 @@ class CAPController {
      * Returns a pure CAP 1.2 XML for a specific record.
      */
     public function exportSingleCap() {
+        AuthMiddleware::requireLogin();
         $type = $_GET['type'] ?? $_GET['amp;type'] ?? '';
         $id = $_GET['id'] ?? $_GET['amp;id'] ?? null;
 

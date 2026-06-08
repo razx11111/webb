@@ -2,7 +2,7 @@
 
 // General Application Settings
 define('APP_NAME', 'CoA - Crisis Containment Service');
-define('APP_URL', 'http://localhost/webb/public'); // Adjust URL based on local environment
+define('APP_URL', 'http://localhost/webb/public');
 
 // --- Database Configuration ---
 define('DB_HOST', 'postgres');

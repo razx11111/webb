@@ -56,7 +56,6 @@ class CAPService {
         $xml->tagSimple("headline", $cap->headline);
         $xml->tagSimple("description", $cap->description);
 
-        // --- Instruction Block ---
         $instructionText = "Please proceed to the nearest safe shelter. Available shelters: ";
         try {
             $shelterModel = new \App\Models\Shelter();
