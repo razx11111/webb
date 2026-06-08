@@ -20,7 +20,7 @@
         <div>
             <article class="card">
                 <header>
-                    <h2 class="recent-activities">Active Wildfire Detections</h2>
+                    <h2 style="color: white;">Active Wildfire Detections</h2>
                 </header>
 
                 <section class="controls-bar">

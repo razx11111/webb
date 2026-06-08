@@ -6,6 +6,7 @@ use App\Models\Flood;
 use App\Models\Fire;
 use App\Models\Earthquake;
 use App\Services\CAPService;
+use App\Services\DataSync;
 
 /**
  * CAPController
@@ -18,20 +19,19 @@ class CAPController {
     /**
      * @var int The interval in seconds for how often to sync data.
      */
-    private const SYNC_INTERVAL = 300; // 5 minutes
+    private const SYNC_INTERVAL = 300; // 5 minute
 
     /**
-     * CAP RSS Feed Endpoint
-     *
-     * Generates a standard RSS 2.0 feed containing CAP 1.2 alerts.
-     * Accessible via /api/cap?type=all&latest=15
+     * standard RSS 2.0 feed containing CAP 1.2 alerts.
+     * /api/cap?type=all&latest=15
      */
     public function generateCapFeed() {
         $type = $_GET['type'] ?? 'all';
         $limit = isset($_GET['latest']) ? (int)$_GET['latest'] : 15;
 
-        $this->lazySyncData();
+        $this->syncData();
 
+        // get disasters with type and data keys
         $disasters = $this->aggregateDisasters($type, $limit);
 
         // Sort by event time descending
@@ -109,19 +109,19 @@ class CAPController {
     /**
      * Triggers data synchronization if the last sync was too long ago.
      */
-    private function lazySyncData() {
+    private function syncData() {
         $syncFile = sys_get_temp_dir() . '/coa_last_sync.txt';
         $currentTime = time();
         $lastSync = file_exists($syncFile) ? (int)file_get_contents($syncFile) : 0;
 
         if (($currentTime - $lastSync) > self::SYNC_INTERVAL) {
             try {
-                $syncService = new \App\Services\DataSync();
+                $syncService = new DataSync();
                 $syncService->syncExternalData();
                 file_put_contents($syncFile, $currentTime);
             } catch (\Exception $e) {
-                // Log error but continue, serving potentially stale data.
-                error_log("Lazy Sync failed: " . $e->getMessage());
+                // continue anyways since one failed sync shouldn't break the whole feed
+                error_log("Sync failed: " . $e->getMessage());
             }
         }
     }
